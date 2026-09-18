@@ -258,7 +258,7 @@ export default function AdminControlPanel() {
                     <td className="py-3 px-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <a
-                          href="/dashboard"
+                          href={`/dashboard?key=${encodeURIComponent(t.api_key)}`}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition"
                           title="Open Bot Studio for Knowledge, Appearance & Leads"
                         >

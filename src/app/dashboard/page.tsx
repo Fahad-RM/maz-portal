@@ -3,48 +3,183 @@
 import React, { useState, useEffect } from "react";
 import { 
   Bot, Palette, BookOpen, Flame, Code, UploadCloud, 
-  Globe, Plus, Check, Copy, Sparkles, Send, ShieldAlert, Save 
+  Globe, Plus, Check, Copy, Sparkles, Send, Save, 
+  Trash2, LogOut, Key, ArrowUpRight, Loader2, FileText 
 } from "lucide-react";
 
+interface DocItem {
+  id: string;
+  bot_id: string;
+  title: string;
+  source_type: string;
+  source_url?: string | null;
+  status: string;
+  chunk_count: number;
+  created_at: string;
+}
+
+interface LeadItem {
+  id: string;
+  bot_id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  score: "HOT" | "WARM" | "COLD";
+  score_reason?: string;
+  summary?: string;
+  synced_to_odoo?: boolean;
+  created_at: string;
+}
+
 export default function CustomerBotStudio() {
+  const [apiKey, setApiKey] = useState<string>("");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [inputKey, setInputKey] = useState<string>("");
+  const [authError, setAuthError] = useState<string>("");
+  const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
+
+  // Active Bot
+  const [currentBot, setCurrentBot] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<"appearance" | "knowledge" | "leads" | "embed">("appearance");
 
-  // Real Maifelz Bot Config State
-  const [botTitle, setBotTitle] = useState("Maifelz Live Support");
-  const [botSubtitle, setBotSubtitle] = useState("Official Odoo Partner & Enterprise AI 24/7");
-  const [brandColor, setBrandColor] = useState("#1e40af");
-  const [welcomeMsg, setWelcomeMsg] = useState("👋 Welcome to Maifelz! How can I assist with your Odoo ERP implementation, custom AI solutions, or digital transformation today?");
-  const [chips, setChips] = useState(["Odoo Implementation", "AI & Chatbot Solutions", "WhatsApp CRM Integration", "Book a Free Consultation"]);
+  // Bot Config Form State
+  const [botTitle, setBotTitle] = useState("");
+  const [botSubtitle, setBotSubtitle] = useState("");
+  const [brandColor, setBrandColor] = useState("#831843");
+  const [welcomeMsg, setWelcomeMsg] = useState("");
+  const [chips, setChips] = useState<string[]>([]);
   const [newChip, setNewChip] = useState("");
-  const [escalationMsg, setEscalationMsg] = useState("I would love to connect you with our lead ERP & AI consultant. Leave your email or phone below!");
+  const [escalationMsg, setEscalationMsg] = useState("");
 
-  // Save State
+  // Saving State
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Fetch live bot config from backend on mount
+  // Knowledge State
+  const [documents, setDocuments] = useState<DocItem[]>([]);
+  const [crawlUrl, setCrawlUrl] = useState("");
+  const [isCrawling, setIsCrawling] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [faqTitle, setFaqTitle] = useState("");
+  const [faqContent, setFaqContent] = useState("");
+  const [isAddingFaq, setIsAddingFaq] = useState(false);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+
+  // Leads State
+  const [leads, setLeads] = useState<LeadItem[]>([]);
+  const [selectedLead, setSelectedLead] = useState<LeadItem | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  // Interactive Live Preview State
+  const [previewInput, setPreviewInput] = useState("");
+  const [previewMessages, setPreviewMessages] = useState<{ role: string; content: string }[]>([]);
+  const [isPreviewStreaming, setIsPreviewStreaming] = useState(false);
+
+  // 1. Initial Auth Check on Mount
   useEffect(() => {
-    fetch("https://maz-backend-t1hy.onrender.com/api/v1/chat/config/maz_maifelz_live")
-      .then(res => res.json())
-      .then(data => {
-        if (data.brand_title) setBotTitle(data.brand_title);
-        if (data.brand_subtitle) setBotSubtitle(data.brand_subtitle);
-        if (data.brand_color) setBrandColor(data.brand_color);
-        if (data.welcome_message) setWelcomeMsg(data.welcome_message);
-        if (data.suggested_chips && data.suggested_chips.length > 0) setChips(data.suggested_chips);
-        if (data.escalation_message) setEscalationMsg(data.escalation_message);
-      })
-      .catch(err => console.log("Using current local state:", err));
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const keyParam = urlParams.get("key");
+    const storedKey = localStorage.getItem("maz_portal_api_key");
+    const activeKey = keyParam || storedKey || "maz_live_maifelz_prod_2026";
+
+    if (activeKey) {
+      verifyAndLoadSession(activeKey);
+    } else {
+      setIsLoadingAuth(false);
+    }
   }, []);
 
+  const verifyAndLoadSession = async (keyToVerify: string) => {
+    setIsLoadingAuth(true);
+    setAuthError("");
+    try {
+      const res = await fetch("https://maz-backend-t1hy.onrender.com/api/v1/bots", {
+        headers: { "X-MAZ-API-KEY": keyToVerify.trim() }
+      });
+
+      if (!res.ok) {
+        throw new Error("Invalid API Key or Customer Seat suspended.");
+      }
+
+      const data = await res.json();
+      const userBots = data.bots || [];
+      if (userBots.length === 0) {
+        throw new Error("No active AI Chatbot found for this seat. Please contact Maifel support.");
+      }
+
+      const bot = userBots.find((b: any) => b.bot_id === "maz_maifelz_live") || userBots[0];
+      
+      setApiKey(keyToVerify.trim());
+      localStorage.setItem("maz_portal_api_key", keyToVerify.trim());
+      setIsAuthenticated(true);
+      loadBotData(bot, keyToVerify.trim());
+    } catch (err: any) {
+      setAuthError(err.message || "Could not authenticate customer seat.");
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoadingAuth(false);
+    }
+  };
+
+  const loadBotData = (bot: any, key: string) => {
+    setCurrentBot(bot);
+    setBotTitle(bot.brand_title || `${bot.name}`);
+    setBotSubtitle(bot.brand_subtitle || "Answers trained on company knowledge 24/7");
+    setBrandColor(bot.brand_color || "#831843");
+    setWelcomeMsg(bot.welcome_message || "👋 Hi there! How can I assist you today?");
+    setChips(bot.suggested_chips || ["Services", "Pricing", "Book a Consultation"]);
+    setEscalationMsg(bot.escalation_message || "I would love to connect you with our specialist. Leave your contact details below!");
+    setPreviewMessages([{ role: "assistant", content: bot.welcome_message || "👋 Welcome! Ask me anything." }]);
+
+    fetchDocuments(bot.bot_id, key);
+    fetchLeads(bot.bot_id, key);
+  };
+
+  const fetchDocuments = async (botId: string, key: string) => {
+    try {
+      const res = await fetch(`https://maz-backend-t1hy.onrender.com/api/v1/bots/${botId}/documents`, {
+        headers: { "X-MAZ-API-KEY": key }
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setDocuments(d.documents || []);
+      }
+    } catch (e) {
+      console.error("Error fetching documents:", e);
+    }
+  };
+
+  const fetchLeads = async (botId: string, key: string) => {
+    try {
+      const res = await fetch(`https://maz-backend-t1hy.onrender.com/api/v1/bots/${botId}/leads`, {
+        headers: { "X-MAZ-API-KEY": key }
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setLeads(d.leads || []);
+      }
+    } catch (e) {
+      console.error("Error fetching leads:", e);
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("maz_portal_api_key");
+    setApiKey("");
+    setIsAuthenticated(false);
+    setCurrentBot(null);
+  };
+
   const handleSaveChanges = async () => {
+    if (!currentBot) return;
     setIsSaving(true);
     try {
-      const res = await fetch("https://maz-backend-t1hy.onrender.com/api/v1/bots/maz_maifelz_live", {
+      const res = await fetch(`https://maz-backend-t1hy.onrender.com/api/v1/bots/${currentBot.bot_id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          "X-MAZ-API-KEY": "maz_live_maifelz_prod_2026"
+          "X-MAZ-API-KEY": apiKey
         },
         body: JSON.stringify({
           brand_title: botTitle,
@@ -58,7 +193,7 @@ export default function CustomerBotStudio() {
 
       if (res.ok) {
         setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 4000);
+        setTimeout(() => setSaveSuccess(false), 3500);
       } else {
         const err = await res.json();
         alert("Notice: " + (err.detail || "Could not save"));
@@ -70,70 +205,275 @@ export default function CustomerBotStudio() {
     }
   };
 
-  // Knowledge State
-  const [crawlUrl, setCrawlUrl] = useState("");
-  const [documents, setDocuments] = useState([
-    { id: "doc_1", title: "Maifelz_Company_Services_Overview.txt", type: "text", status: "indexed", chunks: 8, date: "2026-09-18" },
-    { id: "doc_2", title: "https://www.maifelz.com", type: "url", status: "indexed", chunks: 25, date: "2026-09-18" }
-  ]);
-
-  // Clean Real Leads State
-  const [leads, setLeads] = useState<any[]>([]);
-
-  // Selected Lead Modal
-  const [selectedLead, setSelectedLead] = useState<any>(null);
-  const [copiedCode, setCopiedCode] = useState(false);
-
-  // Odoo Settings
-  const [odooWebhookUrl, setOdooWebhookUrl] = useState("https://myodoo.com/maz/webhook/lead");
-  const [odooApiKey, setOdooApiKey] = useState("maz_live_41c0e3a98db214");
-  const [odooSaved, setOdooSaved] = useState(false);
-
-  const addChip = (e: React.FormEvent) => {
+  const handleCrawlUrl = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newChip.trim()) return;
-    setChips([...chips, newChip.trim()]);
-    setNewChip("");
+    if (!crawlUrl || !currentBot) return;
+    setIsCrawling(true);
+    setActionNotice(null);
+    try {
+      const res = await fetch(`https://maz-backend-t1hy.onrender.com/api/v1/bots/${currentBot.bot_id}/documents/crawl`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-MAZ-API-KEY": apiKey
+        },
+        body: JSON.stringify({ url: crawlUrl })
+      });
+
+      if (res.ok) {
+        setActionNotice(`✅ Successfully crawled and indexed: ${crawlUrl}`);
+        setCrawlUrl("");
+        fetchDocuments(currentBot.bot_id, apiKey);
+      } else {
+        const err = await res.json();
+        setActionNotice(`❌ Crawl error: ${err.detail || "Could not scrape URL"}`);
+      }
+    } catch (e: any) {
+      setActionNotice(`❌ Error: ${e.message}`);
+    } finally {
+      setIsCrawling(false);
+    }
   };
 
-  const removeChip = (idx: number) => {
-    setChips(chips.filter((_, i) => i !== idx));
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentBot) return;
+
+    setIsUploading(true);
+    setActionNotice(null);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`https://maz-backend-t1hy.onrender.com/api/v1/bots/${currentBot.bot_id}/documents/upload`, {
+        method: "POST",
+        headers: { "X-MAZ-API-KEY": apiKey },
+        body: formData
+      });
+
+      if (res.ok) {
+        setActionNotice(`✅ Successfully indexed file: ${file.name}`);
+        fetchDocuments(currentBot.bot_id, apiKey);
+      } else {
+        const err = await res.json();
+        setActionNotice(`❌ Upload error: ${err.detail || "Failed to process file"}`);
+      }
+    } catch (e: any) {
+      setActionNotice(`❌ Upload error: ${e.message}`);
+    } finally {
+      setIsUploading(false);
+      e.target.value = "";
+    }
   };
 
-  const handleSimulateCrawl = (e: React.FormEvent) => {
+  const handleAddFaq = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!crawlUrl) return;
-    setDocuments([
-      {
-        id: "doc_" + Math.random().toString(36).substring(2, 6),
-        title: crawlUrl,
-        type: "url",
-        status: "indexed",
-        chunks: Math.floor(Math.random() * 30) + 10,
-        date: "Just now"
-      },
-      ...documents
-    ]);
-    setCrawlUrl("");
+    if (!faqTitle || !faqContent || !currentBot) return;
+
+    setIsAddingFaq(true);
+    setActionNotice(null);
+    try {
+      const res = await fetch(`https://maz-backend-t1hy.onrender.com/api/v1/bots/${currentBot.bot_id}/documents/text`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-MAZ-API-KEY": apiKey
+        },
+        body: JSON.stringify({
+          title: faqTitle,
+          content: faqContent
+        })
+      });
+
+      if (res.ok) {
+        setActionNotice(`✅ Added knowledge note: "${faqTitle}"`);
+        setFaqTitle("");
+        setFaqContent("");
+        fetchDocuments(currentBot.bot_id, apiKey);
+      } else {
+        const err = await res.json();
+        setActionNotice(`❌ Error: ${err.detail || "Could not add note"}`);
+      }
+    } catch (e: any) {
+      setActionNotice(`❌ Error: ${e.message}`);
+    } finally {
+      setIsAddingFaq(false);
+    }
+  };
+
+  const handleDeleteDoc = async (docId: string, docTitle: string) => {
+    if (!confirm(`Remove "${docTitle}" from your chatbot's knowledge base?`)) return;
+    if (!currentBot) return;
+
+    try {
+      const res = await fetch(`https://maz-backend-t1hy.onrender.com/api/v1/bots/${currentBot.bot_id}/documents/${docId}`, {
+        method: "DELETE",
+        headers: { "X-MAZ-API-KEY": apiKey }
+      });
+      if (res.ok) {
+        fetchDocuments(currentBot.bot_id, apiKey);
+      }
+    } catch (e) {
+      alert("Could not remove document.");
+    }
+  };
+
+  const handleSendPreviewMessage = async () => {
+    const text = previewInput.trim();
+    if (!text || isPreviewStreaming || !currentBot) return;
+
+    setPreviewInput("");
+    const newHistory = [...previewMessages, { role: "user", content: text }];
+    setPreviewMessages(newHistory);
+    setIsPreviewStreaming(true);
+
+    try {
+      const res = await fetch("https://maz-backend-t1hy.onrender.com/api/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bot_id: currentBot.bot_id,
+          session_token: "preview_session_" + currentBot.bot_id,
+          message: text,
+          history: previewMessages
+        })
+      });
+
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let botResponse = "";
+
+      setPreviewMessages([...newHistory, { role: "assistant", content: "" }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n");
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            const dataStr = line.replace("data: ", "").trim();
+            if (dataStr === "[DONE]") break;
+            try {
+              const parsed = JSON.parse(dataStr);
+              if (parsed.content) {
+                botResponse += parsed.content;
+                setPreviewMessages(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { role: "assistant", content: botResponse };
+                  return updated;
+                });
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch (e) {
+      setPreviewMessages(prev => [
+        ...prev,
+        { role: "assistant", content: "Notice: Unable to reach AI server. Please verify backend connectivity." }
+      ]);
+    } finally {
+      setIsPreviewStreaming(false);
+    }
   };
 
   const copyEmbedCode = () => {
-    const code = `<script src="https://maz-portal.vercel.app/maz.js" data-bot-id="maz_maifelz_live" async></script>`;
+    if (!currentBot) return;
+    const code = `<script \n  src="https://maz-portal.vercel.app/maz.js" \n  data-bot-id="${currentBot.bot_id}" \n  defer>\n</script>`;
     navigator.clipboard.writeText(code);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
   };
+
+  if (!isAuthenticated && !isLoadingAuth) {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-xs space-y-6">
+          <div className="text-center">
+            <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/30">
+              <Bot className="w-6 h-6" />
+            </div>
+            <h1 className="text-xl font-black text-slate-900 tracking-tight">Customer Portal Login</h1>
+            <p className="text-slate-500 text-xs mt-1">
+              Sign in with your enterprise Client API Key to manage your AI assistant, knowledge documents, and leads.
+            </p>
+          </div>
+
+          {authError && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl font-medium">
+              {authError}
+            </div>
+          )}
+
+          <form onSubmit={(e) => { e.preventDefault(); verifyAndLoadSession(inputKey); }} className="space-y-4">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
+                <Key className="w-3.5 h-3.5 text-blue-600" /> Client API Key
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="maz_live_..."
+                value={inputKey}
+                onChange={(e) => setInputKey(e.target.value)}
+                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-mono text-xs"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-sm"
+            >
+              Sign In to Studio
+            </button>
+          </form>
+
+          <div className="pt-2 border-t border-slate-100 flex flex-col items-center gap-2">
+            <span className="text-slate-400 text-[11px]">Authorized Maifel Client?</span>
+            <button
+              onClick={() => {
+                setInputKey("maz_live_maifelz_prod_2026");
+                verifyAndLoadSession("maz_live_maifelz_prod_2026");
+              }}
+              className="text-blue-600 hover:text-blue-800 font-semibold text-[11px] underline"
+            >
+              Load Maifel Technologies Live Studio (Demo)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoadingAuth) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center gap-3">
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
+        <span className="text-xs font-semibold text-slate-500">Connecting to enterprise studio...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Customer Bot Studio</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
-              Bot ID: maz_maifelz_live
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 flex items-center gap-1 font-mono">
+              <Bot className="w-3 h-3" /> {currentBot?.bot_id}
             </span>
+            <button
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-rose-600 font-semibold transition ml-2"
+              title="Sign out or switch customer account"
+            >
+              <LogOut className="w-3 h-3" /> Sign Out
+            </button>
           </div>
           <p className="text-xs text-slate-500 mt-1">
             Customize widget appearance, ingest company documents & web pages, review qualified leads, and sync to Odoo.
@@ -176,6 +516,14 @@ export default function CustomerBotStudio() {
           </button>
         </div>
       </div>
+
+      {/* Action Notification Banner */}
+      {actionNotice && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-center justify-between animate-in fade-in">
+          <span>{actionNotice}</span>
+          <button onClick={() => setActionNotice(null)} className="font-bold text-blue-600 hover:text-blue-800">×</button>
+        </div>
+      )}
 
       {/* TAB 1: APPEARANCE & LIVE PREVIEW */}
       {activeTab === "appearance" && (
@@ -246,135 +594,152 @@ export default function CustomerBotStudio() {
                       className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-medium text-[11px] flex items-center gap-1.5"
                     >
                       {chip}
-                      <button onClick={() => removeChip(i)} className="text-blue-400 hover:text-blue-700">×</button>
+                      <button onClick={() => setChips(chips.filter((_, idx) => idx !== i))} className="text-blue-400 hover:text-blue-700">×</button>
                     </span>
                   ))}
                 </div>
-                <form onSubmit={addChip} className="flex gap-2">
+                <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Add prompt chip..."
+                    placeholder="Add suggested quick question chip..."
                     value={newChip}
                     onChange={(e) => setNewChip(e.target.value)}
-                    className="flex-1 px-3 py-1.5 border border-slate-200 rounded-lg outline-none text-xs"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && newChip.trim()) {
+                        e.preventDefault();
+                        setChips([...chips, newChip.trim()]);
+                        setNewChip("");
+                      }
+                    }}
+                    className="flex-1 px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-blue-500 text-xs"
                   />
-                  <button type="submit" className="px-3 py-1.5 bg-slate-800 text-white rounded-lg font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newChip.trim()) {
+                        setChips([...chips, newChip.trim()]);
+                        setNewChip("");
+                      }
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold"
+                  >
                     Add
                   </button>
-                </form>
+                </div>
               </div>
 
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Escalation & Lead Trigger Message</label>
-                <textarea
-                  rows={2}
+                <label className="block font-semibold text-slate-700 mb-1">Escalation / Human Lead Capture Prompt</label>
+                <input
+                  type="text"
                   value={escalationMsg}
                   onChange={(e) => setEscalationMsg(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500 text-xs"
                 />
               </div>
 
-              <div className="pt-3 border-t border-slate-100">
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-3">
+                {saveSuccess && (
+                  <span className="text-emerald-600 font-semibold flex items-center gap-1 text-xs">
+                    <Check className="w-4 h-4" /> Changes saved to production bot!
+                  </span>
+                )}
                 <button
                   type="button"
-                  onClick={handleSaveChanges}
                   disabled={isSaving}
-                  className={`w-full py-3 px-4 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition ${
-                    saveSuccess ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"
-                  }`}
+                  onClick={handleSaveChanges}
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50"
                 >
-                  <Save className="w-4 h-4" />
-                  {isSaving ? "Saving to Live Server..." : saveSuccess ? "✅ Changes Saved & Live on maifelz.com!" : "Save Changes to Live Website"}
+                  {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Appearance
                 </button>
-                <p className="text-[10px] text-slate-400 text-center mt-2">
-                  ⚡ Updates take effect immediately on your live website without needing to redeploy.
-                </p>
               </div>
             </div>
           </div>
 
-          {/* Live Interactive Preview */}
+          {/* Interactive Live Preview */}
           <div className="lg:col-span-5 flex flex-col items-center">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-500" /> Real-Time Widget Live Preview
-            </span>
-
-            <div className="w-[340px] h-[520px] bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col overflow-hidden">
-              {/* Header */}
-              <div className="p-3 text-white flex items-center justify-between" style={{ background: brandColor }}>
+            <div className="w-full max-w-sm bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col h-[560px]">
+              {/* Widget Header */}
+              <div style={{ backgroundColor: brandColor }} className="p-4 text-white flex items-center justify-between transition-colors">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center font-bold text-sm">
-                    M
+                  <div className="w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center font-bold text-sm">
+                    {botTitle.charAt(0) || "M"}
                   </div>
                   <div>
-                    <div className="font-bold text-xs">{botTitle}</div>
-                    <div className="text-[10px] opacity-85 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"></span>
-                      {botSubtitle}
+                    <div className="font-bold text-sm leading-none">{botTitle}</div>
+                    <div className="text-[10px] text-white/80 mt-1 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> {botSubtitle}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Chat Thread */}
-              <div className="flex-1 p-3 bg-slate-50 space-y-2.5 overflow-y-auto text-xs">
-                <div className="p-3 bg-white rounded-2xl rounded-bl-sm border border-slate-200 text-slate-800 shadow-sm max-w-[85%]">
-                  {welcomeMsg}
-                </div>
-
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  {chips.map((c, i) => (
-                    <button
-                      key={i}
-                      className="px-2.5 py-1 rounded-full text-[10px] font-medium border"
-                      style={{ background: "#eef2ff", color: "#3730a3", borderColor: "#c7d2fe" }}
+              {/* Chat Body */}
+              <div className="flex-1 p-4 overflow-y-auto space-y-3 text-xs bg-slate-50/50">
+                {previewMessages.map((m, i) => (
+                  <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+                    <div
+                      style={m.role === "user" ? { backgroundColor: brandColor } : {}}
+                      className={`max-w-[85%] p-3 rounded-2xl whitespace-pre-wrap leading-relaxed ${
+                        m.role === "user" ? "text-white" : "bg-white text-slate-800 border border-slate-200 shadow-sm"
+                      }`}
                     >
-                      {c}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Simulated Lead Card */}
-                <div className="p-2.5 bg-white border border-blue-200 rounded-xl mt-3 space-y-1.5 shadow-sm">
-                  <div className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
-                    📬 Request Official Follow-Up
+                      {m.content}
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    disabled
-                    placeholder="Your Name & Phone / Email"
-                    className="w-full text-[10px] p-1.5 bg-slate-50 border border-slate-200 rounded"
-                  />
-                  <button
-                    disabled
-                    className="w-full py-1 text-white text-[10px] font-bold rounded"
-                    style={{ background: brandColor }}
-                  >
-                    Submit Enquiry
-                  </button>
-                </div>
+                ))}
+                {isPreviewStreaming && (
+                  <div className="flex justify-start">
+                    <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce"></span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce delay-100"></span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce delay-200"></span>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Input Row */}
-              <div className="p-2.5 bg-white border-t border-slate-100 flex items-center gap-2">
+              {/* Chips */}
+              <div className="px-3 py-2 bg-white border-t border-slate-100 flex gap-1.5 overflow-x-auto">
+                {chips.map((chip, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setPreviewInput(chip);
+                    }}
+                    className="px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-medium whitespace-nowrap transition"
+                  >
+                    {chip}
+                  </button>
+                ))}
+              </div>
+
+              {/* Input Footer */}
+              <div className="p-3 bg-white border-t border-slate-200 flex items-center gap-2">
                 <input
                   type="text"
-                  disabled
                   placeholder="Ask a question..."
-                  className="flex-1 text-xs px-3 py-1.5 border border-slate-200 rounded-full bg-slate-50"
+                  value={previewInput}
+                  onChange={(e) => setPreviewInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSendPreviewMessage();
+                    }
+                  }}
+                  className="flex-1 px-3 py-2 border border-slate-200 rounded-xl outline-none text-xs focus:border-blue-500"
                 />
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-white"
-                  style={{ background: brandColor }}
+                <button
+                  onClick={handleSendPreviewMessage}
+                  style={{ backgroundColor: brandColor }}
+                  className="p-2 rounded-xl text-white transition hover:opacity-90"
                 >
-                  <Send className="w-3.5 h-3.5" />
-                </div>
-              </div>
-
-              <div className="py-1 text-center text-[9px] text-slate-400 bg-white border-t border-slate-50">
-                Powered by <strong>MAZ by Maifelz</strong>
+                  <Send className="w-4 h-4" />
+                </button>
               </div>
             </div>
+            <span className="text-[11px] text-slate-400 mt-2 font-medium">Live Customer Interactive Preview</span>
           </div>
         </div>
       )}
@@ -382,20 +747,39 @@ export default function CustomerBotStudio() {
       {/* TAB 2: KNOWLEDGE BASE HUB */}
       {activeTab === "knowledge" && (
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* File Ingestion Card */}
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-xs">
-              <h3 className="font-bold text-sm text-slate-900 mb-2 flex items-center gap-2">
-                <UploadCloud className="w-4 h-4 text-blue-600" /> Upload Documents (PDF, DOCX, TXT)
-              </h3>
-              <p className="text-slate-500 mb-4">
-                MAZ parses text, extracts tables, and chunks your documentation with semantic embeddings.
-              </p>
-              <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-blue-400 transition cursor-pointer bg-slate-50/50">
-                <UploadCloud className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <div className="font-semibold text-slate-700">Click or drag PDF files here</div>
-                <div className="text-[10px] text-slate-400 mt-1">Up to 25MB per file • Instant indexing</div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-xs flex flex-col justify-between">
+              <div>
+                <h3 className="font-bold text-sm text-slate-900 mb-2 flex items-center gap-2">
+                  <UploadCloud className="w-4 h-4 text-blue-600" /> Upload Documents
+                </h3>
+                <p className="text-slate-500 mb-4 leading-relaxed">
+                  Upload company PDFs, brochures, manuals, or pricing sheets. MAZ automatically parses and vector-indexes them.
+                </p>
               </div>
+
+              <label className="border-2 border-dashed border-slate-300 rounded-xl p-6 text-center hover:border-blue-500 transition cursor-pointer bg-slate-50/50 block">
+                <input
+                  type="file"
+                  accept=".pdf,.docx,.txt"
+                  onChange={handleFileUpload}
+                  disabled={isUploading}
+                  className="hidden"
+                />
+                {isUploading ? (
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="w-6 h-6 text-blue-600 animate-spin mb-1" />
+                    <span className="font-semibold text-blue-600">Indexing document into vector DB...</span>
+                  </div>
+                ) : (
+                  <>
+                    <UploadCloud className="w-7 h-7 text-slate-400 mx-auto mb-1.5" />
+                    <div className="font-semibold text-slate-700">Click to upload PDF, DOCX, or TXT</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Up to 25MB • Instant RAG chunking</div>
+                  </>
+                )}
+              </label>
             </div>
 
             {/* URL Crawler Card */}
@@ -403,23 +787,61 @@ export default function CustomerBotStudio() {
               <h3 className="font-bold text-sm text-slate-900 mb-2 flex items-center gap-2">
                 <Globe className="w-4 h-4 text-emerald-600" /> Crawl Website URL
               </h3>
-              <p className="text-slate-500 mb-4">
-                Enter your website URL or documentation page. MAZ will automatically scrape and index its contents.
+              <p className="text-slate-500 mb-4 leading-relaxed">
+                Enter your landing page, service catalogue, or documentation URL. MAZ will crawl and index its contents.
               </p>
-              <form onSubmit={handleSimulateCrawl} className="space-y-3">
+              <form onSubmit={handleCrawlUrl} className="space-y-3">
                 <input
                   type="url"
                   required
-                  placeholder="https://yourcompany.com/pricing"
+                  placeholder="https://yourcompany.com/services"
                   value={crawlUrl}
                   onChange={(e) => setCrawlUrl(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-emerald-500 text-xs"
                 />
                 <button
                   type="submit"
-                  className="w-full py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition"
+                  disabled={isCrawling}
+                  className="w-full py-2 bg-emerald-600 text-white rounded-lg font-semibold hover:bg-emerald-700 transition disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  Start Website Crawl & Index
+                  {isCrawling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  {isCrawling ? "Crawling & Vector Indexing..." : "Crawl & Index Page"}
+                </button>
+              </form>
+            </div>
+
+            {/* Custom FAQ / Note Card */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-xs">
+              <h3 className="font-bold text-sm text-slate-900 mb-2 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-purple-600" /> Add Custom FAQ Note
+              </h3>
+              <p className="text-slate-500 mb-3 leading-relaxed">
+                Directly add facts, objection responses, or internal policies for the AI assistant.
+              </p>
+              <form onSubmit={handleAddFaq} className="space-y-2.5">
+                <input
+                  type="text"
+                  required
+                  placeholder="Title (e.g. Return Policy or Custom Pricing)"
+                  value={faqTitle}
+                  onChange={(e) => setFaqTitle(e.target.value)}
+                  className="w-full px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-purple-500 text-xs"
+                />
+                <textarea
+                  rows={2}
+                  required
+                  placeholder="Explain the answer or company policy details..."
+                  value={faqContent}
+                  onChange={(e) => setFaqContent(e.target.value)}
+                  className="w-full px-3 py-1.5 border border-slate-200 rounded-lg outline-none focus:border-purple-500 text-xs"
+                />
+                <button
+                  type="submit"
+                  disabled={isAddingFaq}
+                  className="w-full py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+                >
+                  {isAddingFaq ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  {isAddingFaq ? "Saving Note..." : "Add Knowledge Note"}
                 </button>
               </form>
             </div>
@@ -427,8 +849,16 @@ export default function CustomerBotStudio() {
 
           {/* Indexed Documents Table */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-xs">
-            <div className="p-4 border-b border-slate-200 font-bold text-slate-900 text-sm">
-              Trained Knowledge Base Documents ({documents.length})
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+              <span className="font-bold text-slate-900 text-sm">
+                Trained Knowledge Base Documents ({documents.length})
+              </span>
+              <button
+                onClick={() => currentBot && fetchDocuments(currentBot.bot_id, apiKey)}
+                className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold"
+              >
+                ↻ Refresh List
+              </button>
             </div>
             <table className="w-full text-left">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-semibold text-[10px]">
@@ -437,23 +867,51 @@ export default function CustomerBotStudio() {
                   <th className="py-2.5 px-4">Type</th>
                   <th className="py-2.5 px-4">Indexed Chunks</th>
                   <th className="py-2.5 px-4">Status</th>
-                  <th className="py-2.5 px-4">Date</th>
+                  <th className="py-2.5 px-4">Created</th>
+                  <th className="py-2.5 px-4 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {documents.map((d) => (
-                  <tr key={d.id} className="hover:bg-slate-50/70">
-                    <td className="py-3 px-4 font-bold text-slate-800">{d.title}</td>
-                    <td className="py-3 px-4 uppercase text-[10px] font-bold text-slate-500">{d.type}</td>
-                    <td className="py-3 px-4 font-mono">{d.chunks} chunks</td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
-                        {d.status}
-                      </span>
+                {documents.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                      No documents indexed yet. Upload a PDF or crawl a URL above to train your bot!
                     </td>
-                    <td className="py-3 px-4 text-slate-400">{d.date}</td>
                   </tr>
-                ))}
+                ) : (
+                  documents.map((d) => (
+                    <tr key={d.id} className="hover:bg-slate-50/70">
+                      <td className="py-3 px-4 font-bold text-slate-800">
+                        {d.source_url ? (
+                          <a href={d.source_url} target="_blank" rel="noopener noreferrer" className="hover:underline text-blue-600 flex items-center gap-1">
+                            {d.title} <ArrowUpRight className="w-3 h-3" />
+                          </a>
+                        ) : (
+                          d.title
+                        )}
+                      </td>
+                      <td className="py-3 px-4 uppercase text-[10px] font-bold text-slate-500">{d.source_type}</td>
+                      <td className="py-3 px-4 font-mono">{d.chunk_count} chunks</td>
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">
+                          {d.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-slate-400">
+                        {d.created_at ? new Date(d.created_at).toLocaleDateString() : "Just now"}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={() => handleDeleteDoc(d.id, d.title)}
+                          className="p-1 rounded text-slate-400 hover:text-rose-600 transition"
+                          title="Remove document from knowledge base"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -471,50 +929,66 @@ export default function CustomerBotStudio() {
               </p>
             </div>
             <div className="flex gap-2">
-              <span className="px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 font-bold">1 Hot Lead 🔥</span>
-              <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">1 Warm Lead 🌤️</span>
+              <span className="px-2.5 py-1 rounded-full bg-rose-100 text-rose-700 font-bold">
+                {leads.filter(l => l.score === "HOT").length} Hot Deals 🔥
+              </span>
+              <span className="px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 font-bold">
+                {leads.filter(l => l.score === "WARM").length} Warm Inquiries 🌤️
+              </span>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {leads.map((ld) => (
-              <div
-                key={ld.id}
-                onClick={() => setSelectedLead(ld)}
-                className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-400 cursor-pointer transition flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      ld.score === "HOT" ? "bg-rose-100 text-rose-700" :
-                      ld.score === "WARM" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"
-                    }`}>
-                      {ld.score === "HOT" ? "🔥 HOT DEAL" : ld.score === "WARM" ? "🌤️ WARM" : "❄️ COLD"}
-                    </span>
-                    <span className="text-[10px] text-slate-400">{ld.date}</span>
-                  </div>
-
-                  <h4 className="font-bold text-sm text-slate-900 mb-1">{ld.name}</h4>
-                  <div className="text-slate-500 text-[11px] mb-2">
-                    {ld.email || "No email"} {ld.phone ? `• ${ld.phone}` : ""}
-                  </div>
-
-                  <p className="text-slate-700 text-xs line-clamp-2 mb-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                    {ld.summary}
-                  </p>
-                </div>
-
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
-                  <span className="text-slate-400">Click to view transcript</span>
-                  {ld.synced_odoo && (
-                    <span className="text-emerald-600 font-bold flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Synced to Odoo
-                    </span>
-                  )}
-                </div>
+          {leads.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-400">
+              <Flame className="w-10 h-10 mx-auto text-slate-300 mb-2" />
+              <div className="font-bold text-slate-700">No leads captured yet</div>
+              <div className="text-xs text-slate-400 mt-1">
+                When visitors chat on your website and ask about pricing or services, MAZ scores their qualification and records them here automatically.
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {leads.map((ld) => (
+                <div
+                  key={ld.id}
+                  onClick={() => setSelectedLead(ld)}
+                  className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm hover:border-blue-400 cursor-pointer transition flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        ld.score === "HOT" ? "bg-rose-100 text-rose-700" :
+                        ld.score === "WARM" ? "bg-amber-100 text-amber-700" : "bg-slate-100 text-slate-600"
+                      }`}>
+                        {ld.score === "HOT" ? "🔥 HOT DEAL" : ld.score === "WARM" ? "🌤️ WARM" : "❄️ COLD"}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        {ld.created_at ? new Date(ld.created_at).toLocaleDateString() : "Recent"}
+                      </span>
+                    </div>
+
+                    <h4 className="font-bold text-sm text-slate-900 mb-1">{ld.name}</h4>
+                    <div className="text-slate-500 text-[11px] mb-2">
+                      {ld.email || "No email"} {ld.phone ? `• ${ld.phone}` : ""}
+                    </div>
+
+                    <p className="text-slate-700 text-xs line-clamp-2 mb-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                      {ld.summary || ld.score_reason || "Inquiry from website chat"}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
+                    <span className="text-slate-400">Click to view details</span>
+                    {ld.synced_to_odoo && (
+                      <span className="text-emerald-600 font-bold flex items-center gap-1">
+                        <Check className="w-3 h-3" /> Synced to Odoo
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Lead Details Modal */}
           {selectedLead && (
@@ -536,13 +1010,13 @@ export default function CustomerBotStudio() {
                   <div>
                     <span className="font-bold text-slate-700">AI Scoring Rationale:</span>
                     <p className="p-2.5 bg-slate-50 rounded-lg text-slate-600 mt-1 border border-slate-100">
-                      {selectedLead.score_reason}
+                      {selectedLead.score_reason || "Lead qualified through interactive website dialogue."}
                     </p>
                   </div>
                   <div>
                     <span className="font-bold text-slate-700">Executive Summary:</span>
                     <p className="p-2.5 bg-blue-50/60 rounded-lg text-blue-900 mt-1 border border-blue-100">
-                      {selectedLead.summary}
+                      {selectedLead.summary || "Prospective client contacted assistant directly on website."}
                     </p>
                   </div>
                 </div>
@@ -570,12 +1044,12 @@ export default function CustomerBotStudio() {
               <Code className="w-4 h-4 text-blue-600" /> 1-Tag Universal Website Embed
             </h3>
             <p className="text-slate-500 leading-relaxed">
-              Paste this asynchronous code snippet right before the closing <code>&lt;/body&gt;</code> tag on any website (WordPress, Shopify, Squarespace, Webflow, Odoo, or custom HTML).
+              Paste this asynchronous code snippet right before the closing <code>&lt;/body&gt;</code> tag on any website (WordPress, Shopify, Squarespace, Webflow, Odoo, or custom Next.js/HTML).
             </p>
 
             <div className="relative bg-slate-900 text-blue-200 font-mono p-4 rounded-xl text-[11px] overflow-x-auto">
               <code>
-                {`<script \n  src="https://maz-portal.vercel.app/maz.js" \n  data-bot-id="maz_maifelz_live" \n  async>\n</script>`}
+                {`<script \n  src="https://maz-portal.vercel.app/maz.js" \n  data-bot-id="${currentBot?.bot_id}" \n  defer>\n</script>`}
               </code>
               <button
                 onClick={copyEmbedCode}
@@ -587,7 +1061,7 @@ export default function CustomerBotStudio() {
             </div>
 
             <div className="p-3 bg-emerald-50 rounded-xl text-emerald-800 border border-emerald-200 font-medium">
-              ⚡ <strong>Zero Page Slowdown:</strong> Loads asynchronously after initial page load without hurting Core Web Vitals.
+              ⚡ <strong>Zero SEO / Core Web Vitals Impact:</strong> Loads asynchronously after initial page load with scoped styles.
             </div>
           </div>
 
@@ -597,39 +1071,17 @@ export default function CustomerBotStudio() {
               <Flame className="w-4 h-4 text-purple-600" /> Dedicated Odoo CRM Connector
             </h3>
             <p className="text-slate-500 leading-relaxed">
-              Install the <code>maz_odoo_connector</code> module in your Odoo instance to automatically capture leads and log AI conversation summaries into your CRM pipeline.
+              Connect this bot directly to Odoo CRM using the standalone <code>maz_odoo_connector</code> module.
             </p>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Odoo Webhook URL</label>
-                <input
-                  type="url"
-                  value={odooWebhookUrl}
-                  onChange={(e) => setOdooWebhookUrl(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none font-mono text-xs"
-                />
+            <div className="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+              <div className="font-semibold text-slate-700">Webhook Endpoint for Odoo:</div>
+              <code className="text-slate-600 bg-white p-2 rounded border border-slate-200 block text-[11px]">
+                https://maz-backend-t1hy.onrender.com/api/v1/chat/lead
+              </code>
+              <div className="text-[10px] text-slate-400">
+                Whenever a qualified lead submits contact details in your widget, MAZ instantly dispatches the lead into your Odoo CRM pipeline.
               </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">MAZ API Key</label>
-                <input
-                  type="text"
-                  value={odooApiKey}
-                  onChange={(e) => setOdooApiKey(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none font-mono text-xs"
-                />
-              </div>
-
-              <button
-                onClick={() => {
-                  setOdooSaved(true);
-                  setTimeout(() => setOdooSaved(false), 2500);
-                }}
-                className="w-full py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition"
-              >
-                {odooSaved ? "✅ Odoo Connection Verified" : "Save & Verify Odoo Sync"}
-              </button>
             </div>
           </div>
         </div>
