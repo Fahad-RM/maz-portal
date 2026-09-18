@@ -105,7 +105,7 @@ export default function CustomerBotStudio() {
       const data = await res.json();
       const userBots = data.bots || [];
       if (userBots.length === 0) {
-        throw new Error("No active AI Chatbot found for this seat. Please contact Maifel support.");
+        throw new Error("No active AI Chatbot found for this seat. Please contact Maifelz support.");
       }
 
       const bot = userBots.find((b: any) => b.bot_id === "maz_maifelz_live") || userBots[0];
@@ -432,7 +432,7 @@ export default function CustomerBotStudio() {
           </form>
 
           <div className="pt-2 border-t border-slate-100 flex flex-col items-center gap-2">
-            <span className="text-slate-400 text-[11px]">Authorized Maifel Client?</span>
+            <span className="text-slate-400 text-[11px]">Authorized Maifelz Client?</span>
             <button
               onClick={() => {
                 setInputKey("maz_live_maifelz_prod_2026");
@@ -440,7 +440,7 @@ export default function CustomerBotStudio() {
               }}
               className="text-blue-600 hover:text-blue-800 font-semibold text-[11px] underline"
             >
-              Load Maifel Technologies Live Studio (Demo)
+              Load Maifelz Technologies Live Studio (Demo)
             </button>
           </div>
         </div>

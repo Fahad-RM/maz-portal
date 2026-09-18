@@ -25,7 +25,7 @@ export default function AdminControlPanel() {
   const [tenants, setTenants] = useState<TenantData[]>([
     {
       id: "tenant_maifelz",
-      company_name: "Maifel Technologies LLP",
+      company_name: "Maifelz Technologies LLP",
       contact_name: "Fahad Rayamarakkar",
       email: "contact@maifelz.com",
       api_key: "maz_live_maifelz_prod_2026",
@@ -111,7 +111,7 @@ export default function AdminControlPanel() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Maifel Super-Admin Control Panel</h1>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Maifelz Super-Admin Control Panel</h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
               Master Admin
             </span>

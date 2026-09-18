@@ -25,7 +25,7 @@ export default function HomePage() {
             href="/admin"
             className="px-6 py-3 rounded-xl bg-slate-900 text-white text-sm font-semibold hover:bg-slate-800 transition shadow-md flex items-center gap-2"
           >
-            Maifel Master Seat Manager <ArrowRight className="w-4 h-4" />
+            Maifelz Master Seat Manager <ArrowRight className="w-4 h-4" />
           </Link>
           <Link
             href="/dashboard"

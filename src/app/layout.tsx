@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "MAZ Platform — Autonomous AI Business Agents & Control Panel",
-  description: "Enterprise multi-tenant AI business agent platform by Maifel Technologies.",
+  description: "Enterprise multi-tenant AI business agent platform by Maifelz Technologies.",
 };
 
 export default function RootLayout({
@@ -33,7 +33,7 @@ export default function RootLayout({
                 href="/admin"
                 className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-100 transition"
               >
-                Maifel Super-Admin
+                Maifelz Super-Admin
               </a>
               <a
                 href="/dashboard"
@@ -48,7 +48,7 @@ export default function RootLayout({
         <main className="flex-1">{children}</main>
 
         <footer className="border-t border-slate-200 bg-white py-6 text-center text-xs text-slate-500">
-          © 2026 Maifel Technologies LLP. All rights reserved. • Built for teams that demand high-conversion AI agents.
+          © 2026 Maifelz Technologies LLP. All rights reserved. • Built for teams that demand high-conversion AI agents.
         </footer>
       </body>
     </html>

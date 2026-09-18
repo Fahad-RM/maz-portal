@@ -1,8 +1,8 @@
 /**
  * MAZ Universal Embeddable AI Widget
  * Ultra-Premium Glassmorphism, Animated Smiling Mascot & Proactive Engagement
- * Copyright (c) 2026 Maifel Technologies LLP
- * https://maifeltechnologies.com
+ * Copyright (c) 2026 Maifelz Technologies LLP
+ * https://maifelz.com
  */
 (function () {
   "use strict";
@@ -736,7 +736,7 @@
         </button>
       </div>
       <div class="maz-branding">
-        Powered by <a href="https://maifeltechnologies.com" target="_blank" rel="noopener">MAZ by Maifelz</a>
+        Powered by <a href="https://maifelz.com" target="_blank" rel="noopener">MAZ by Maifelz</a>
       </div>
     </div>
   `;
