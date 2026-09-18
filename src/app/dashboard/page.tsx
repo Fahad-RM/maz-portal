@@ -4,8 +4,22 @@ import React, { useState, useEffect } from "react";
 import { 
   Bot, Palette, BookOpen, Flame, Code, UploadCloud, 
   Globe, Plus, Check, Copy, Sparkles, Send, Save, 
-  Trash2, LogOut, Key, ArrowUpRight, Loader2, FileText 
+  Trash2, LogOut, Key, ArrowUpRight, Loader2, FileText,
+  User, Lock, Eye, EyeOff, Shield, Zap, AlertCircle, BarChart3, RefreshCw
 } from "lucide-react";
+
+interface TenantProfile {
+  id: string;
+  company_name: string;
+  contact_name?: string;
+  email: string;
+  plan_tier: string;
+  max_messages_per_month: number;
+  messages_used_this_month: number;
+  remaining_messages: number;
+  usage_percentage: number;
+  is_active: boolean;
+}
 
 interface DocItem {
   id: string;
@@ -34,9 +48,18 @@ interface LeadItem {
 export default function CustomerBotStudio() {
   const [apiKey, setApiKey] = useState<string>("");
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [tenantProfile, setTenantProfile] = useState<TenantProfile | null>(null);
+  
+  // Login Form State
+  const [loginMethod, setLoginMethod] = useState<"credentials" | "apiKey">("credentials");
+  const [loginEmail, setLoginEmail] = useState<string>("");
+  const [loginPassword, setLoginPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
   const [inputKey, setInputKey] = useState<string>("");
   const [authError, setAuthError] = useState<string>("");
   const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true);
+  const [showRechargeModal, setShowRechargeModal] = useState<boolean>(false);
 
   // Active Bot
   const [currentBot, setCurrentBot] = useState<any>(null);
@@ -81,7 +104,7 @@ export default function CustomerBotStudio() {
     const urlParams = new URLSearchParams(window.location.search);
     const keyParam = urlParams.get("key");
     const storedKey = localStorage.getItem("maz_portal_api_key");
-    const activeKey = keyParam || storedKey || "maz_live_maifelz_prod_2026";
+    const activeKey = keyParam || storedKey;
 
     if (activeKey) {
       verifyAndLoadSession(activeKey);
@@ -94,12 +117,13 @@ export default function CustomerBotStudio() {
     setIsLoadingAuth(true);
     setAuthError("");
     try {
+      // 1. Fetch bots
       const res = await fetch("https://maz-backend-t1hy.onrender.com/api/v1/bots", {
         headers: { "X-MAZ-API-KEY": keyToVerify.trim() }
       });
 
       if (!res.ok) {
-        throw new Error("Invalid API Key or Customer Seat suspended.");
+        throw new Error("Invalid credentials or customer seat suspended.");
       }
 
       const data = await res.json();
@@ -114,11 +138,61 @@ export default function CustomerBotStudio() {
       localStorage.setItem("maz_portal_api_key", keyToVerify.trim());
       setIsAuthenticated(true);
       loadBotData(bot, keyToVerify.trim());
+
+      // 2. Fetch fresh tenant subscription quota
+      try {
+        const pRes = await fetch("https://maz-backend-t1hy.onrender.com/api/v1/auth/customer/me", {
+          headers: { "X-MAZ-API-KEY": keyToVerify.trim() }
+        });
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          setTenantProfile(pData.tenant);
+          localStorage.setItem("maz_tenant_info", JSON.stringify(pData.tenant));
+        }
+      } catch (err) {
+        console.error("Could not fetch profile:", err);
+      }
     } catch (err: any) {
       setAuthError(err.message || "Could not authenticate customer seat.");
       setIsAuthenticated(false);
     } finally {
       setIsLoadingAuth(false);
+    }
+  };
+
+  const handleCustomerLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginEmail || !loginPassword) return;
+
+    setIsLoggingIn(true);
+    setAuthError("");
+    try {
+      const res = await fetch("https://maz-backend-t1hy.onrender.com/api/v1/auth/customer/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginEmail.trim(), password: loginPassword })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || "Invalid login credentials. Please check your email and password.");
+      }
+
+      setApiKey(data.token);
+      localStorage.setItem("maz_portal_api_key", data.token);
+      setTenantProfile(data.tenant);
+      localStorage.setItem("maz_tenant_info", JSON.stringify(data.tenant));
+      setIsAuthenticated(true);
+
+      if (data.bots && data.bots.length > 0) {
+        loadBotData(data.bots[0], data.token);
+      } else {
+        verifyAndLoadSession(data.token);
+      }
+    } catch (err: any) {
+      setAuthError(err.message || "Login failed");
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -166,7 +240,9 @@ export default function CustomerBotStudio() {
 
   const handleLogout = () => {
     localStorage.removeItem("maz_portal_api_key");
+    localStorage.removeItem("maz_tenant_info");
     setApiKey("");
+    setTenantProfile(null);
     setIsAuthenticated(false);
     setCurrentBot(null);
   };
@@ -390,7 +466,7 @@ export default function CustomerBotStudio() {
 
   if (!isAuthenticated && !isLoadingAuth) {
     return (
-      <div className="min-h-[85vh] flex items-center justify-center px-4">
+      <div className="min-h-[85vh] flex items-center justify-center px-4 py-10">
         <div className="max-w-md w-full bg-white rounded-3xl p-8 border border-slate-200 shadow-xl text-xs space-y-6">
           <div className="text-center">
             <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/30">
@@ -398,41 +474,121 @@ export default function CustomerBotStudio() {
             </div>
             <h1 className="text-xl font-black text-slate-900 tracking-tight">Customer Portal Login</h1>
             <p className="text-slate-500 text-xs mt-1">
-              Sign in with your enterprise Client API Key to manage your AI assistant, knowledge documents, and leads.
+              Sign in with your Maifelz customer credentials to manage your AI assistant, knowledge base, and live leads.
             </p>
           </div>
 
+          {/* Login Method Tabs */}
+          <div className="grid grid-cols-2 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => { setLoginMethod("credentials"); setAuthError(""); }}
+              className={`py-2 rounded-lg transition flex items-center justify-center gap-1.5 ${
+                loginMethod === "credentials" ? "bg-white text-slate-900 shadow-sm font-bold" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <User className="w-3.5 h-3.5" /> Email & Password
+            </button>
+            <button
+              type="button"
+              onClick={() => { setLoginMethod("apiKey"); setAuthError(""); }}
+              className={`py-2 rounded-lg transition flex items-center justify-center gap-1.5 ${
+                loginMethod === "apiKey" ? "bg-white text-slate-900 shadow-sm font-bold" : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              <Key className="w-3.5 h-3.5" /> Client API Key
+            </button>
+          </div>
+
           {authError && (
-            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl font-medium">
-              {authError}
+            <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl font-medium flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+              <span>{authError}</span>
             </div>
           )}
 
-          <form onSubmit={(e) => { e.preventDefault(); verifyAndLoadSession(inputKey); }} className="space-y-4">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
-                <Key className="w-3.5 h-3.5 text-blue-600" /> Client API Key
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="maz_live_..."
-                value={inputKey}
-                onChange={(e) => setInputKey(e.target.value)}
-                className="w-full px-3 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-mono text-xs"
-              />
-            </div>
+          {/* Form 1: Email & Password */}
+          {loginMethod === "credentials" ? (
+            <form onSubmit={handleCustomerLogin} className="space-y-4">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                  <User className="w-3.5 h-3.5 text-blue-600" /> Customer Email / Username
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="name@company.com"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs"
+                />
+              </div>
 
-            <button
-              type="submit"
-              className="w-full py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-sm"
-            >
-              Sign In to Studio
-            </button>
-          </form>
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                  <Lock className="w-3.5 h-3.5 text-blue-600" /> Password
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    placeholder="Enter your customer password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 pr-10 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isLoggingIn}
+                className="w-full py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-sm flex items-center justify-center gap-2"
+              >
+                {isLoggingIn ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" /> Verifying Credentials...
+                  </>
+                ) : (
+                  "Sign In to Customer Studio"
+                )}
+              </button>
+            </form>
+          ) : (
+            /* Form 2: Direct API Key */
+            <form onSubmit={(e) => { e.preventDefault(); verifyAndLoadSession(inputKey); }} className="space-y-4">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1.5 flex items-center gap-1">
+                  <Key className="w-3.5 h-3.5 text-blue-600" /> Client API Key
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="maz_live_..."
+                  value={inputKey}
+                  onChange={(e) => setInputKey(e.target.value)}
+                  className="w-full px-3 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-mono text-xs"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition shadow-sm"
+              >
+                Sign In with API Key
+              </button>
+            </form>
+          )}
 
           <div className="pt-2 border-t border-slate-100 flex flex-col items-center gap-2">
-            <span className="text-slate-400 text-[11px]">Authorized Maifelz Client?</span>
+            <span className="text-slate-400 text-[11px]">Explore with demo account?</span>
             <button
               onClick={() => {
                 setInputKey("maz_live_maifelz_prod_2026");
@@ -456,6 +612,12 @@ export default function CustomerBotStudio() {
       </div>
     );
   }
+
+  const maxQuota = tenantProfile?.max_messages_per_month || 5000;
+  const used = tenantProfile?.messages_used_this_month || 0;
+  const remaining = tenantProfile?.remaining_messages ?? Math.max(0, maxQuota - used);
+  const usagePct = tenantProfile?.usage_percentage ?? Math.min(100, Math.round((used / maxQuota) * 100));
+  const planTier = tenantProfile?.plan_tier || "pro";
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -516,6 +678,116 @@ export default function CustomerBotStudio() {
           </button>
         </div>
       </div>
+
+      {/* Subscription Tier & Quota Balance Card */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-5 sm:p-6 mb-8 shadow-xl border border-indigo-900/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xs font-semibold text-indigo-300 uppercase tracking-wider flex items-center gap-1">
+              <Shield className="w-3.5 h-3.5 text-indigo-400" /> Organization
+            </span>
+            <span className="text-xs text-slate-400">•</span>
+            <span className="text-xs text-slate-300 font-medium">
+              {tenantProfile?.company_name || currentBot?.brand_title || "Maifelz Technologies"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-black tracking-tight text-white capitalize">
+              {planTier} Plan
+            </h2>
+            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wide bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 shadow-sm">
+              Active Tier
+            </span>
+          </div>
+
+          <p className="text-xs text-slate-400">
+            Provisioned by Maifelz Admin • Logged in as: <span className="text-slate-200 font-semibold">{tenantProfile?.email || "Customer"}</span>
+          </p>
+        </div>
+
+        {/* Quota Balance Meter */}
+        <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-4 min-w-[280px] sm:min-w-[340px]">
+          <div className="flex items-center justify-between text-xs font-semibold mb-2">
+            <span className="text-indigo-200 flex items-center gap-1.5">
+              <BarChart3 className="w-4 h-4 text-indigo-300" /> Monthly Message Balance
+            </span>
+            <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
+              usagePct > 85 ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" :
+              usagePct > 65 ? "bg-amber-500/20 text-amber-300 border border-amber-500/30" :
+              "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+            }`}>
+              {remaining.toLocaleString()} left
+            </span>
+          </div>
+
+          <div className="w-full bg-white/20 h-2 rounded-full overflow-hidden mb-2">
+            <div 
+              className={`h-full rounded-full transition-all duration-500 ${
+                usagePct > 85 ? "bg-rose-500" : usagePct > 65 ? "bg-amber-400" : "bg-emerald-400"
+              }`}
+              style={{ width: `${Math.min(usagePct, 100)}%` }}
+            />
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-slate-300">
+            <span>{used.toLocaleString()} / {maxQuota.toLocaleString()} msgs ({usagePct}%)</span>
+            <button
+              onClick={() => setShowRechargeModal(true)}
+              className="text-indigo-300 hover:text-white font-semibold underline flex items-center gap-1"
+            >
+              Upgrade / Recharge
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Upgrade / Recharge Modal */}
+      {showRechargeModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 text-xs">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center mx-auto mb-3">
+              <Zap className="w-6 h-6" />
+            </div>
+
+            <h3 className="text-lg font-bold text-slate-900 text-center">Subscription Tier & Quota Upgrade</h3>
+            <p className="text-slate-500 text-center mt-1 mb-5">
+              Need additional monthly AI message credits or extra chatbot seats? Contact your Maifelz account manager for instant allocation.
+            </p>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2 mb-6">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Current Plan:</span>
+                <span className="font-bold text-slate-900 uppercase">{planTier}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Monthly Limit:</span>
+                <span className="font-bold text-slate-900">{maxQuota.toLocaleString()} messages</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Remaining Balance:</span>
+                <span className="font-bold text-emerald-600">{remaining.toLocaleString()} messages</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <a
+                href={`mailto:contact@maifelz.com?subject=Quota%20Recharge%20Request%20-%20${encodeURIComponent(tenantProfile?.company_name || "Customer")}&body=Hello%20Maifelz%20Team,%0A%0AWe%20would%20like%20to%20upgrade%20our%20monthly%20message%20quota%20for%20our%20account:%20${encodeURIComponent(tenantProfile?.email || "")}.`}
+                className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2"
+              >
+                Contact Maifelz Support via Email
+              </a>
+              <button
+                type="button"
+                onClick={() => setShowRechargeModal(false)}
+                className="w-full py-2.5 border border-slate-200 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold transition"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Action Notification Banner */}
       {actionNotice && (

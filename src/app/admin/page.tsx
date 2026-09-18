@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Users, Bot, Flame, MessageSquare, Plus, CheckCircle2, 
-  XCircle, Copy, Key, ArrowUpRight, Search, ShieldCheck, Pencil 
+  XCircle, Copy, Key, ArrowUpRight, Search, ShieldCheck, 
+  Pencil, RefreshCw, Eye, EyeOff, Check, Send, AlertTriangle, Lock
 } from "lucide-react";
 
 interface TenantData {
@@ -15,83 +16,240 @@ interface TenantData {
   plan_tier: string;
   max_bots: number;
   bot_count: number;
+  default_bot_id?: string;
   max_messages_per_month: number;
   messages_used_this_month: number;
   is_active: boolean;
   created_at: string;
 }
 
+interface WelcomePacket {
+  company_name: string;
+  username: string;
+  password: string;
+  plan_tier: string;
+  max_messages_per_month: number;
+  api_key: string;
+  login_url: string;
+}
+
+const BACKEND_URL = "https://maz-backend-t1hy.onrender.com";
+
 export default function AdminControlPanel() {
-  const [tenants, setTenants] = useState<TenantData[]>([
-    {
-      id: "tenant_maifelz",
-      company_name: "Maifelz Technologies LLP",
-      contact_name: "Fahad Rayamarakkar",
-      email: "contact@maifelz.com",
-      api_key: "maz_live_maifelz_prod_2026",
-      plan_tier: "enterprise",
-      max_bots: 10,
-      bot_count: 1,
-      max_messages_per_month: 50000,
-      messages_used_this_month: 0,
-      is_active: true,
-      created_at: "2026-09-18"
-    }
-  ]);
+  const [adminKey, setAdminKey] = useState("maifelz_super_admin_secret_key");
+  const [tenants, setTenants] = useState<TenantData[]>([]);
+  const [metrics, setMetrics] = useState<{
+    total_tenants: number;
+    active_tenants: number;
+    total_bots: number;
+    total_leads: number;
+    total_messages: number;
+  }>({
+    total_tenants: 0,
+    active_tenants: 0,
+    total_bots: 0,
+    total_leads: 0,
+    total_messages: 0,
+  });
 
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [editingTenant, setEditingTenant] = useState<TenantData | null>(null);
 
+  // Provision Modal State
+  const [showModal, setShowModal] = useState(false);
   const [newCompany, setNewCompany] = useState("");
   const [newContact, setNewContact] = useState("");
   const [newEmail, setNewEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [newPlan, setNewPlan] = useState("pro");
   const [newQuota, setNewQuota] = useState(5000);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Welcome Packet Modal State
+  const [welcomePacket, setWelcomePacket] = useState<WelcomePacket | null>(null);
+  const [copiedWelcome, setCopiedWelcome] = useState(false);
+
+  // Edit Modal State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<TenantData | null>(null);
+  const [editPassword, setEditPassword] = useState("");
+  const [resetUsageCounter, setResetUsageCounter] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const openEditModal = (t: TenantData) => {
-    setEditingTenant({ ...t });
-    setShowEditModal(true);
+  // Generate random strong password
+  const generateRandomPassword = () => {
+    const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let pwd = "Mz@";
+    for (let i = 0; i < 6; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return pwd;
   };
 
-  const handleUpdateTenant = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingTenant) return;
-    setTenants(tenants.map(t => t.id === editingTenant.id ? editingTenant : t));
-    setShowEditModal(false);
-    setEditingTenant(null);
-  };
-
-  const handleCreateTenant = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newCompany || !newEmail) return;
-
-    const newTenant: TenantData = {
-      id: "t_" + Math.random().toString(36).substring(2, 6),
-      company_name: newCompany,
-      contact_name: newContact || "Administrator",
-      email: newEmail,
-      api_key: "maz_live_" + Math.random().toString(36).substring(2, 14),
-      plan_tier: newPlan,
-      max_bots: newPlan === "enterprise" ? 10 : newPlan === "pro" ? 3 : 1,
-      bot_count: 1,
-      max_messages_per_month: Number(newQuota),
-      messages_used_this_month: 0,
-      is_active: true,
-      created_at: new Date().toISOString().split("T")[0]
-    };
-
-    setTenants([newTenant, ...tenants]);
-    setShowModal(false);
+  const openProvisionModal = () => {
     setNewCompany("");
     setNewContact("");
     setNewEmail("");
+    setNewPassword(generateRandomPassword());
+    setNewPlan("pro");
+    setNewQuota(5000);
+    setShowModal(true);
   };
 
-  const toggleStatus = (id: string) => {
-    setTenants(tenants.map(t => t.id === id ? { ...t, is_active: !t.is_active } : t));
+  // Fetch real tenants & metrics from backend
+  const fetchData = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const [tenantsRes, metricsRes] = await Promise.all([
+        fetch(`${BACKEND_URL}/api/v1/admin/tenants`, {
+          headers: { "X-SUPER-ADMIN-KEY": adminKey }
+        }),
+        fetch(`${BACKEND_URL}/api/v1/admin/metrics`, {
+          headers: { "X-SUPER-ADMIN-KEY": adminKey }
+        })
+      ]);
+
+      if (!tenantsRes.ok) {
+        throw new Error(`Failed to authenticate with Admin Key (HTTP ${tenantsRes.status})`);
+      }
+
+      const tenantsData = await tenantsRes.json();
+      setTenants(tenantsData.tenants || []);
+
+      if (metricsRes.ok) {
+        const m = await metricsRes.json();
+        setMetrics(m);
+      }
+    } catch (err: any) {
+      console.error(err);
+      setErrorMsg(err.message || "Failed to load admin data");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [adminKey]);
+
+  const handleCreateTenant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCompany || !newEmail) return;
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/v1/admin/tenants`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-SUPER-ADMIN-KEY": adminKey
+        },
+        body: JSON.stringify({
+          company_name: newCompany,
+          contact_name: newContact || undefined,
+          email: newEmail,
+          password: newPassword,
+          plan_tier: newPlan,
+          max_bots: newPlan === "enterprise" ? 10 : newPlan === "pro" ? 3 : 1,
+          max_messages_per_month: Number(newQuota)
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.detail || "Failed to create customer seat");
+      }
+
+      setShowModal(false);
+      // Show Welcome Packet
+      setWelcomePacket({
+        company_name: data.company_name,
+        username: data.username,
+        password: data.temporary_password,
+        plan_tier: data.plan_tier,
+        max_messages_per_month: data.max_messages_per_month,
+        api_key: data.api_key,
+        login_url: data.login_url || "https://maz-portal.vercel.app/dashboard"
+      });
+
+      fetchData();
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openEditModal = (t: TenantData) => {
+    setEditingTenant({ ...t });
+    setEditPassword("");
+    setResetUsageCounter(false);
+    setShowEditModal(true);
+  };
+
+  const handleUpdateTenant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTenant) return;
+
+    setIsUpdating(true);
+    try {
+      const payload: any = {
+        company_name: editingTenant.company_name,
+        contact_name: editingTenant.contact_name,
+        email: editingTenant.email,
+        plan_tier: editingTenant.plan_tier,
+        max_bots: Number(editingTenant.max_bots),
+        max_messages_per_month: Number(editingTenant.max_messages_per_month)
+      };
+
+      if (editPassword && editPassword.trim()) {
+        payload.password = editPassword.trim();
+      }
+
+      if (resetUsageCounter) {
+        payload.messages_used_this_month = 0;
+      }
+
+      const res = await fetch(`${BACKEND_URL}/api/v1/admin/tenants/${editingTenant.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "X-SUPER-ADMIN-KEY": adminKey
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.detail || "Failed to update customer seat");
+      }
+
+      setShowEditModal(false);
+      setEditingTenant(null);
+      fetchData();
+    } catch (err: any) {
+      alert("Error: " + err.message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const toggleStatus = async (id: string) => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/v1/admin/tenants/${id}/toggle`, {
+        method: "POST",
+        headers: { "X-SUPER-ADMIN-KEY": adminKey }
+      });
+      if (res.ok) {
+        fetchData();
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const copyApiKey = (key: string) => {
@@ -100,9 +258,27 @@ export default function AdminControlPanel() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  const copyWelcomePacketText = () => {
+    if (!welcomePacket) return;
+    const text = `🚀 Welcome to your MAZ AI Platform by Maifelz Technologies!
+
+Here are your credentials to access your Customer Portal:
+🔗 Customer Portal: ${welcomePacket.login_url}
+👤 Username: ${welcomePacket.username}
+🔑 Password: ${welcomePacket.password}
+📦 Plan: ${welcomePacket.plan_tier.toUpperCase()}
+📊 Monthly Messages: ${welcomePacket.max_messages_per_month.toLocaleString()}
+
+Log in to customize your AI assistant, manage company knowledge, view customer leads, and copy your website widget!`;
+
+    navigator.clipboard.writeText(text);
+    setCopiedWelcome(true);
+    setTimeout(() => setCopiedWelcome(false), 2500);
+  };
+
   const filtered = tenants.filter(t => 
-    t.company_name.toLowerCase().includes(search.toLowerCase()) || 
-    t.email.toLowerCase().includes(search.toLowerCase())
+    (t.company_name || "").toLowerCase().includes(search.toLowerCase()) || 
+    (t.email || "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -117,17 +293,38 @@ export default function AdminControlPanel() {
             </span>
           </div>
           <p className="text-sm text-slate-500 mt-1">
-            Provision customer seats, configure monthly quotas, manage API credentials, and monitor platform activity.
+            Provision customer seats, configure monthly subscription quotas, generate credentials, and monitor platform activity.
           </p>
         </div>
 
-        <button
-          onClick={() => setShowModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-xs hover:bg-blue-700 transition shadow-sm self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" /> Provision Customer Seat
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchData}
+            disabled={isLoading}
+            className="p-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition"
+            title="Refresh Data"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin text-blue-600" : ""}`} />
+          </button>
+
+          <button
+            onClick={openProvisionModal}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 text-white font-semibold text-xs hover:bg-blue-700 transition shadow-sm"
+          >
+            <Plus className="w-4 h-4" /> Provision Customer Seat
+          </button>
+        </div>
       </div>
+
+      {errorMsg && (
+        <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center justify-between text-xs text-rose-700">
+          <div className="flex items-center gap-2 font-medium">
+            <AlertTriangle className="w-4 h-4" />
+            <span>{errorMsg}</span>
+          </div>
+          <button onClick={fetchData} className="font-bold underline ml-4">Retry</button>
+        </div>
+      )}
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -136,8 +333,10 @@ export default function AdminControlPanel() {
             <span className="text-xs font-semibold text-slate-500">Active Customer Seats</span>
             <Users className="w-4 h-4 text-blue-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">{tenants.filter(t => t.is_active).length} / {tenants.length}</div>
-          <span className="text-[11px] text-emerald-600 font-medium">100% capacity available</span>
+          <div className="text-2xl font-black text-slate-900 mt-2">
+            {metrics.active_tenants} / {metrics.total_tenants}
+          </div>
+          <span className="text-[11px] text-emerald-600 font-medium">Isolated multi-tenant database</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -145,8 +344,8 @@ export default function AdminControlPanel() {
             <span className="text-xs font-semibold text-slate-500">Live AI Chatbots</span>
             <Bot className="w-4 h-4 text-indigo-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">{tenants.reduce((acc, t) => acc + t.bot_count, 0)} Active</div>
-          <span className="text-[11px] text-slate-400 font-medium">Across all client websites</span>
+          <div className="text-2xl font-black text-slate-900 mt-2">{metrics.total_bots} Active</div>
+          <span className="text-[11px] text-slate-400 font-medium">Auto-trained with RAG embeddings</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -154,8 +353,8 @@ export default function AdminControlPanel() {
             <span className="text-xs font-semibold text-slate-500">Captured Leads</span>
             <Flame className="w-4 h-4 text-rose-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">0 Leads</div>
-          <span className="text-[11px] text-emerald-600 font-medium">Ready for live traffic on maifelz.com</span>
+          <div className="text-2xl font-black text-slate-900 mt-2">{metrics.total_leads} Leads</div>
+          <span className="text-[11px] text-emerald-600 font-medium">Live traffic synced</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -163,15 +362,20 @@ export default function AdminControlPanel() {
             <span className="text-xs font-semibold text-slate-500">Monthly Message Volume</span>
             <MessageSquare className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">{tenants.reduce((acc, t) => acc + t.messages_used_this_month, 0)} msgs</div>
-          <span className="text-[11px] text-slate-400 font-medium">Quota: 50,000 / month</span>
+          <div className="text-2xl font-black text-slate-900 mt-2">
+            {tenants.reduce((acc, t) => acc + (t.messages_used_this_month || 0), 0).toLocaleString()} msgs
+          </div>
+          <span className="text-[11px] text-slate-400 font-medium">Across all client seats</span>
         </div>
       </div>
 
       {/* Customer Seats Table Card */}
       <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <h2 className="text-base font-bold text-slate-900">Provisioned Client Accounts</h2>
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Provisioned Client Accounts</h2>
+            <p className="text-[11px] text-slate-500">Manage customer credentials, plan quotas, and view bot telemetry.</p>
+          </div>
           <div className="relative w-full sm:w-64">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
@@ -199,32 +403,35 @@ export default function AdminControlPanel() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filtered.map((t) => {
-                const percent = Math.round((t.messages_used_this_month / t.max_messages_per_month) * 100);
+                const maxQuota = t.max_messages_per_month || 5000;
+                const used = t.messages_used_this_month || 0;
+                const percent = Math.round((used / maxQuota) * 100);
                 return (
                   <tr key={t.id} className="hover:bg-slate-50/70 transition">
                     <td className="py-3 px-4">
                       <div className="font-bold text-slate-900">{t.company_name}</div>
-                      <div className="text-[11px] text-slate-400">{t.contact_name} • {t.email}</div>
+                      <div className="text-[11px] text-slate-400">{t.contact_name || "Admin"} • {t.email}</div>
                     </td>
                     <td className="py-3 px-4">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                         t.plan_tier === "enterprise" ? "bg-purple-100 text-purple-700" :
-                        t.plan_tier === "pro" ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-700"
+                        t.plan_tier === "pro" ? "bg-blue-100 text-blue-700" :
+                        t.plan_tier === "growth" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-700"
                       }`}>
-                        {t.plan_tier}
+                        {t.plan_tier || "starter"}
                       </span>
                     </td>
                     <td className="py-3 px-4 font-semibold text-slate-800">
-                      {t.bot_count} / {t.max_bots}
+                      {t.bot_count || 1} / {t.max_bots || 3}
                     </td>
-                    <td className="py-3 px-4 min-w-[140px]">
+                    <td className="py-3 px-4 min-w-[150px]">
                       <div className="flex justify-between text-[10px] mb-1 font-medium">
-                        <span>{t.messages_used_this_month}</span>
-                        <span className="text-slate-400">{t.max_messages_per_month}</span>
+                        <span>{used.toLocaleString()}</span>
+                        <span className="text-slate-400">{maxQuota.toLocaleString()} msgs</span>
                       </div>
                       <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
                         <div
-                          className={`h-full rounded-full ${percent > 85 ? 'bg-rose-500' : 'bg-blue-600'}`}
+                          className={`h-full rounded-full ${percent > 85 ? 'bg-rose-500' : percent > 60 ? 'bg-amber-500' : 'bg-blue-600'}`}
                           style={{ width: `${Math.min(percent, 100)}%` }}
                         />
                       </div>
@@ -236,9 +443,9 @@ export default function AdminControlPanel() {
                         title="Click to copy API Key"
                       >
                         <Key className="w-3 h-3 text-slate-500" />
-                        <span>{t.api_key.substring(0, 14)}...</span>
+                        <span>{t.api_key ? `${t.api_key.substring(0, 14)}...` : "—"}</span>
                         {copiedKey === t.api_key ? (
-                          <span className="text-emerald-600 font-bold">Copied!</span>
+                          <span className="text-emerald-600 font-bold text-[10px]">Copied!</span>
                         ) : (
                           <Copy className="w-3 h-3 text-slate-400" />
                         )}
@@ -256,18 +463,20 @@ export default function AdminControlPanel() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5">
                         <a
                           href={`/dashboard?key=${encodeURIComponent(t.api_key)}`}
+                          target="_blank"
+                          rel="noreferrer"
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition"
-                          title="Open Bot Studio for Knowledge, Appearance & Leads"
+                          title="Open Customer Bot Studio"
                         >
                           Studio <ArrowUpRight className="w-3 h-3" />
                         </a>
                         <button
                           onClick={() => openEditModal(t)}
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border border-slate-200 hover:bg-slate-100 text-slate-700 transition"
-                          title="Edit Client details & quotas"
+                          title="Edit Client details & Subscription Quota"
                         >
                           <Pencil className="w-3 h-3" /> Edit
                         </button>
@@ -279,13 +488,20 @@ export default function AdminControlPanel() {
                               : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                           }`}
                         >
-                          {t.is_active ? "Suspend" : "Reactivate"}
+                          {t.is_active ? "Suspend" : "Activate"}
                         </button>
                       </div>
                     </td>
                   </tr>
                 );
               })}
+              {filtered.length === 0 && !isLoading && (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                    No customer accounts found. Click "Provision Customer Seat" above to add your first client.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -293,70 +509,103 @@ export default function AdminControlPanel() {
 
       {/* Provision New Customer Seat Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Provision New Customer Seat</h3>
-            <p className="text-xs text-slate-500 mb-5">
-              Allocate an enterprise MAZ account for your client with custom limits.
-            </p>
-
-            <form onSubmit={handleCreateTenant} className="space-y-4 text-xs">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-black">
+                <Plus className="w-5 h-5" />
+              </div>
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Client / Company Name</label>
+                <h3 className="text-lg font-bold text-slate-900">Provision Customer Seat</h3>
+                <p className="text-xs text-slate-500">
+                  Allocate an enterprise MAZ account with instant login credentials.
+                </p>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateTenant} className="space-y-4 text-xs mt-5">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Company / Organization Name *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Acme Corporation"
+                  placeholder="e.g. Apex Global Solutions"
                   value={newCompany}
                   onChange={(e) => setNewCompany(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs"
                 />
               </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Contact Person</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Sarah Jenkins"
+                    value={newContact}
+                    onChange={(e) => setNewContact(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Login Username / Email *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="sarah@apex.com"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Contact Person</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-semibold text-slate-700">Initial Password *</label>
+                  <button
+                    type="button"
+                    onClick={() => setNewPassword(generateRandomPassword())}
+                    className="text-[11px] text-blue-600 hover:text-blue-800 font-semibold inline-flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-3 h-3" /> Auto-Generate
+                  </button>
+                </div>
                 <input
                   type="text"
-                  placeholder="e.g. John Doe"
-                  value={newContact}
-                  onChange={(e) => setNewContact(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Primary Email</label>
-                <input
-                  type="email"
                   required
-                  placeholder="john@acme.com"
-                  value={newEmail}
-                  onChange={(e) => setNewEmail(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500 font-mono text-xs"
                 />
+                <p className="text-[10px] text-slate-400 mt-1">This will be shared with the client for Customer Portal access.</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 pt-1">
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Plan Tier</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Subscription Tier</label>
                   <select
                     value={newPlan}
                     onChange={(e) => setNewPlan(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none bg-white"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl outline-none bg-white font-medium text-xs"
                   >
-                    <option value="starter">Starter ($49/mo)</option>
-                    <option value="pro">Pro ($99/mo)</option>
-                    <option value="enterprise">Enterprise ($249/mo)</option>
+                    <option value="starter">Starter (1,000 msgs/mo)</option>
+                    <option value="growth">Growth (3,000 msgs/mo)</option>
+                    <option value="pro">Pro (5,000 msgs/mo)</option>
+                    <option value="enterprise">Enterprise (20,000+ msgs/mo)</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Monthly Message Limit</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Monthly Message Quota</label>
                   <input
                     type="number"
+                    step="500"
+                    min="500"
                     value={newQuota}
                     onChange={(e) => setNewQuota(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none"
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500 text-xs"
                   />
                 </div>
               </div>
@@ -365,15 +614,23 @@ export default function AdminControlPanel() {
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold"
+                  disabled={isSubmitting}
+                  className="px-4 py-2.5 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
+                  disabled={isSubmitting}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition shadow-sm flex items-center gap-2"
                 >
-                  Create Customer Seat
+                  {isSubmitting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" /> Provisioning...
+                    </>
+                  ) : (
+                    "Create Seat & Generate Credentials"
+                  )}
                 </button>
               </div>
             </form>
@@ -381,84 +638,182 @@ export default function AdminControlPanel() {
         </div>
       )}
 
-      {/* Edit Customer Seat Modal */}
+      {/* Customer Welcome Packet Modal */}
+      {welcomePacket && (
+        <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            
+            <h3 className="text-xl font-black text-slate-900 text-center">Customer Seat Provisioned!</h3>
+            <p className="text-xs text-slate-500 text-center mt-1">
+              Account created for <span className="font-bold text-slate-800">{welcomePacket.company_name}</span>. Provide these login credentials to your customer:
+            </p>
+
+            {/* Credential summary box */}
+            <div className="mt-5 p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5 text-xs font-mono">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-sans">Customer Portal:</span>
+                <a href={welcomePacket.login_url} target="_blank" rel="noreferrer" className="text-blue-600 font-bold underline font-sans">
+                  {welcomePacket.login_url}
+                </a>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-sans">Username / Email:</span>
+                <span className="font-bold text-slate-900">{welcomePacket.username}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-sans">Temporary Password:</span>
+                <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                  {welcomePacket.password}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-sans">Subscription Tier:</span>
+                <span className="uppercase font-bold text-purple-700 font-sans">{welcomePacket.plan_tier}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-500 font-sans">Monthly Quota:</span>
+                <span className="font-bold text-slate-900 font-sans">{welcomePacket.max_messages_per_month.toLocaleString()} msgs</span>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col sm:flex-row items-center gap-2.5">
+              <button
+                onClick={copyWelcomePacketText}
+                className="w-full sm:flex-1 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition flex items-center justify-center gap-2 text-xs"
+              >
+                {copiedWelcome ? (
+                  <>
+                    <Check className="w-4 h-4 text-emerald-400" /> Copied Welcome Message!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-4 h-4" /> Copy Message for WhatsApp / Email
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={() => setWelcomePacket(null)}
+                className="w-full sm:w-auto px-5 py-3 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-xl font-bold text-xs"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Customer Seat & Subscription Modal */}
       {showEditModal && editingTenant && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Edit Client Details & Quotas</h3>
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-bold text-slate-900 mb-1">Edit Client Seat & Subscription</h3>
             <p className="text-xs text-slate-500 mb-5">
-              Update organization profile, tier limits, or monthly message allocations for this client.
+              Manage subscription quotas, reset monthly balances, or change login password.
             </p>
 
             <form onSubmit={handleUpdateTenant} className="space-y-4 text-xs">
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Client / Company Name</label>
+                <label className="block font-semibold text-slate-700 mb-1">Company Name</label>
                 <input
                   type="text"
                   required
                   value={editingTenant.company_name}
                   onChange={(e) => setEditingTenant({ ...editingTenant, company_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
                 />
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Contact Person</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Contact Person</label>
+                  <input
+                    type="text"
+                    value={editingTenant.contact_name || ""}
+                    onChange={(e) => setEditingTenant({ ...editingTenant, contact_name: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Email / Username</label>
+                  <input
+                    type="email"
+                    required
+                    value={editingTenant.email}
+                    onChange={(e) => setEditingTenant({ ...editingTenant, email: e.target.value })}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Reset Password */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+                <label className="block font-bold text-slate-800 mb-1 flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 text-blue-600" /> Reset Customer Password
+                </label>
                 <input
                   type="text"
-                  value={editingTenant.contact_name}
-                  onChange={(e) => setEditingTenant({ ...editingTenant, contact_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                  placeholder="Leave blank to keep existing password"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg outline-none font-mono text-xs focus:border-blue-500"
                 />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Entering a new password here will immediately update their customer portal login.
+                </span>
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Primary Email</label>
-                <input
-                  type="email"
-                  required
-                  value={editingTenant.email}
-                  onChange={(e) => setEditingTenant({ ...editingTenant, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
-                />
-              </div>
-
+              {/* Subscription & Quota Section */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-slate-700 mb-1">Plan Tier</label>
                   <select
                     value={editingTenant.plan_tier}
                     onChange={(e) => setEditingTenant({ ...editingTenant, plan_tier: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none bg-white font-medium"
+                    className="w-full px-3 py-2.5 border border-slate-200 rounded-xl outline-none bg-white font-medium"
                   >
                     <option value="starter">Starter</option>
+                    <option value="growth">Growth</option>
                     <option value="pro">Pro</option>
                     <option value="enterprise">Enterprise</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Max Bots Allowed</label>
+                  <label className="block font-semibold text-slate-700 mb-1">Monthly Message Limit</label>
                   <input
                     type="number"
-                    min="1"
-                    value={editingTenant.max_bots}
-                    onChange={(e) => setEditingTenant({ ...editingTenant, max_bots: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none"
+                    min="100"
+                    step="500"
+                    value={editingTenant.max_messages_per_month}
+                    onChange={(e) => setEditingTenant({ ...editingTenant, max_messages_per_month: Number(e.target.value) })}
+                    className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl outline-none"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Monthly Message Limit</label>
-                <input
-                  type="number"
-                  min="100"
-                  step="500"
-                  value={editingTenant.max_messages_per_month}
-                  onChange={(e) => setEditingTenant({ ...editingTenant, max_messages_per_month: Number(e.target.value) })}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none"
-                />
+              {/* Quota Reset Option */}
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between">
+                <div>
+                  <div className="font-bold text-blue-900">Current Usage This Month</div>
+                  <div className="text-[11px] text-blue-700">
+                    {editingTenant.messages_used_this_month || 0} / {editingTenant.max_messages_per_month} msgs used
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-2 cursor-pointer font-bold text-blue-900 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={resetUsageCounter}
+                    onChange={(e) => setResetUsageCounter(e.target.checked)}
+                    className="rounded text-blue-600 w-4 h-4"
+                  />
+                  <span>Reset to 0 (Recharge)</span>
+                </label>
               </div>
 
               <div className="pt-4 flex items-center justify-end gap-2">
@@ -468,15 +823,16 @@ export default function AdminControlPanel() {
                     setShowEditModal(false);
                     setEditingTenant(null);
                   }}
-                  className="px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold"
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-sm"
+                  disabled={isUpdating}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 text-white font-bold hover:bg-blue-700 transition shadow-sm flex items-center gap-2"
                 >
-                  Save Changes
+                  {isUpdating ? <RefreshCw className="w-4 h-4 animate-spin" /> : "Save Changes"}
                 </button>
               </div>
             </form>
