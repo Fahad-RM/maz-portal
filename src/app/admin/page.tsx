@@ -24,32 +24,18 @@ interface TenantData {
 export default function AdminControlPanel() {
   const [tenants, setTenants] = useState<TenantData[]>([
     {
-      id: "t_01",
-      company_name: "Apex Logistics Ltd",
+      id: "tenant_maifelz",
+      company_name: "Maifel Technologies LLP",
       contact_name: "Fahad Rayamarakkar",
-      email: "fahad@apexlogistics.com",
-      api_key: "maz_live_9f83a2810d9c44",
+      email: "contact@maifelz.com",
+      api_key: "maz_live_maifelz_prod_2026",
       plan_tier: "enterprise",
-      max_bots: 5,
-      bot_count: 2,
-      max_messages_per_month: 10000,
-      messages_used_this_month: 2450,
-      is_active: true,
-      created_at: "2026-09-15"
-    },
-    {
-      id: "t_02",
-      company_name: "Billabong Solar & Energy",
-      contact_name: "Sarah Jenkins",
-      email: "sarah@billabongsolar.com.au",
-      api_key: "maz_live_41c0e3a98db214",
-      plan_tier: "pro",
-      max_bots: 2,
+      max_bots: 10,
       bot_count: 1,
-      max_messages_per_month: 5000,
-      messages_used_this_month: 890,
+      max_messages_per_month: 50000,
+      messages_used_this_month: 0,
       is_active: true,
-      created_at: "2026-09-17"
+      created_at: "2026-09-18"
     }
   ]);
 

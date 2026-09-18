@@ -9,59 +9,24 @@ import {
 export default function CustomerBotStudio() {
   const [activeTab, setActiveTab] = useState<"appearance" | "knowledge" | "leads" | "embed">("appearance");
 
-  // Bot Config State
-  const [botTitle, setBotTitle] = useState("Billabong Solar Assistant");
-  const [botSubtitle, setBotSubtitle] = useState("Answers trained on business knowledge 24/7");
-  const [brandColor, setBrandColor] = useState("#2563eb");
-  const [welcomeMsg, setWelcomeMsg] = useState("👋 Hello! Looking for clean solar energy for your home or business?");
-  const [chips, setChips] = useState(["Residential Rebates", "Commercial Quote", "Battery Storage", "Book a Free Site Audit"]);
+  // Real Maifelz Bot Config State
+  const [botTitle, setBotTitle] = useState("Maifelz Live Support");
+  const [botSubtitle, setBotSubtitle] = useState("Official Odoo Partner & Enterprise AI 24/7");
+  const [brandColor, setBrandColor] = useState("#1e40af");
+  const [welcomeMsg, setWelcomeMsg] = useState("👋 Welcome to Maifelz! How can I assist with your Odoo ERP implementation, custom AI solutions, or digital transformation today?");
+  const [chips, setChips] = useState(["Odoo Implementation", "AI & Chatbot Solutions", "WhatsApp CRM Integration", "Book a Free Consultation"]);
   const [newChip, setNewChip] = useState("");
-  const [escalationMsg, setEscalationMsg] = useState("I would love to connect you with our certified solar engineer. Leave your email or phone below!");
+  const [escalationMsg, setEscalationMsg] = useState("I would love to connect you with our lead ERP & AI consultant. Leave your email or phone below!");
 
   // Knowledge State
   const [crawlUrl, setCrawlUrl] = useState("");
   const [documents, setDocuments] = useState([
-    { id: "doc_1", title: "Solar_Rebates_Guide_2026.pdf", type: "file", status: "indexed", chunks: 24, date: "2026-09-16" },
-    { id: "doc_2", title: "Commercial_PPA_Pricing.docx", type: "file", status: "indexed", chunks: 18, date: "2026-09-17" },
-    { id: "doc_3", title: "https://billabongsolar.com.au/services", type: "url", status: "indexed", chunks: 42, date: "2026-09-18" }
+    { id: "doc_1", title: "Maifelz_Company_Services_Overview.txt", type: "text", status: "indexed", chunks: 8, date: "2026-09-18" },
+    { id: "doc_2", title: "https://www.maifelz.com", type: "url", status: "indexed", chunks: 25, date: "2026-09-18" }
   ]);
 
-  // Leads State
-  const [leads, setLeads] = useState([
-    {
-      id: "ld_1",
-      name: "Marcus Vance",
-      email: "marcus@vancemanufacturing.com",
-      phone: "+61 412 889 201",
-      score: "HOT",
-      score_reason: "Requested commercial warehouse quote (100kW system) and provided direct phone.",
-      summary: "Customer needs 100kW rooftop installation before end of Q4 for federal tax rebate.",
-      date: "10 mins ago",
-      synced_odoo: true
-    },
-    {
-      id: "ld_2",
-      name: "Elena Rostova",
-      email: "elena.r@gmail.com",
-      phone: "",
-      score: "WARM",
-      score_reason: "Comparing residential battery storage vs grid export rates.",
-      summary: "Inquired about Tesla Powerwall 3 warranty and payback period.",
-      date: "1 hour ago",
-      synced_odoo: true
-    },
-    {
-      id: "ld_3",
-      name: "Anonymous Visitor",
-      email: "",
-      phone: "",
-      score: "COLD",
-      score_reason: "General inquiry on whether solar panels work in rainy weather.",
-      summary: "Brief informational query.",
-      date: "Yesterday",
-      synced_odoo: false
-    }
-  ]);
+  // Clean Real Leads State
+  const [leads, setLeads] = useState<any[]>([]);
 
   // Selected Lead Modal
   const [selectedLead, setSelectedLead] = useState<any>(null);
@@ -101,7 +66,7 @@ export default function CustomerBotStudio() {
   };
 
   const copyEmbedCode = () => {
-    const code = `<script src="https://maz-widget.maifel.com/maz.js" data-bot-id="maz_41c0e3a98db2" async></script>`;
+    const code = `<script src="https://maz-portal.vercel.app/maz.js" data-bot-id="maz_maifelz_live" async></script>`;
     navigator.clipboard.writeText(code);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
@@ -115,7 +80,7 @@ export default function CustomerBotStudio() {
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">Customer Bot Studio</h1>
             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800">
-              Bot ID: maz_41c0e3a98db2
+              Bot ID: maz_maifelz_live
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
@@ -541,7 +506,7 @@ export default function CustomerBotStudio() {
 
             <div className="relative bg-slate-900 text-blue-200 font-mono p-4 rounded-xl text-[11px] overflow-x-auto">
               <code>
-                {`<script \n  src="https://maz-widget.maifel.com/maz.js" \n  data-bot-id="maz_41c0e3a98db2" \n  async>\n</script>`}
+                {`<script \n  src="https://maz-portal.vercel.app/maz.js" \n  data-bot-id="maz_maifelz_live" \n  async>\n</script>`}
               </code>
               <button
                 onClick={copyEmbedCode}
