@@ -1,0 +1,5 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "pnpm run build || npm run build",
+  "installCommand": "pnpm install || npm install"
+}
