@@ -469,28 +469,6 @@ export default function SuperbPortalLogin() {
 
         </div>
       </div>
-
-      {/* Footer Branding & SEO links */}
-      <footer className="border-t border-white/10 py-6 px-4 sm:px-6 lg:px-8 text-center text-xs text-slate-500 relative z-10">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-300">Maifelz Technologies LLP</span>
-            <span>•</span>
-            <span>Official Odoo ERP Partner & Autonomous AI Solutions</span>
-          </div>
-          <div className="flex items-center gap-4 text-slate-400">
-            <a href="https://www.maifelz.com" target="_blank" rel="noreferrer" className="hover:text-white transition">
-              Official Website
-            </a>
-            <span>•</span>
-            <a href="https://maz-backend-t1hy.onrender.com/docs" target="_blank" rel="noreferrer" className="hover:text-white transition">
-              API Documentation
-            </a>
-            <span>•</span>
-            <span>Privacy & Multi-Tenant Isolation</span>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
