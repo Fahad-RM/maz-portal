@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Bot, Palette, BookOpen, Flame, Code, UploadCloud, 
-  Globe, Plus, Check, Copy, Sparkles, Send, ShieldAlert 
+  Globe, Plus, Check, Copy, Sparkles, Send, ShieldAlert, Save 
 } from "lucide-react";
 
 export default function CustomerBotStudio() {
@@ -17,6 +17,58 @@ export default function CustomerBotStudio() {
   const [chips, setChips] = useState(["Odoo Implementation", "AI & Chatbot Solutions", "WhatsApp CRM Integration", "Book a Free Consultation"]);
   const [newChip, setNewChip] = useState("");
   const [escalationMsg, setEscalationMsg] = useState("I would love to connect you with our lead ERP & AI consultant. Leave your email or phone below!");
+
+  // Save State
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Fetch live bot config from backend on mount
+  useEffect(() => {
+    fetch("https://maz-backend-t1hy.onrender.com/api/v1/chat/config/maz_maifelz_live")
+      .then(res => res.json())
+      .then(data => {
+        if (data.brand_title) setBotTitle(data.brand_title);
+        if (data.brand_subtitle) setBotSubtitle(data.brand_subtitle);
+        if (data.brand_color) setBrandColor(data.brand_color);
+        if (data.welcome_message) setWelcomeMsg(data.welcome_message);
+        if (data.suggested_chips && data.suggested_chips.length > 0) setChips(data.suggested_chips);
+        if (data.escalation_message) setEscalationMsg(data.escalation_message);
+      })
+      .catch(err => console.log("Using current local state:", err));
+  }, []);
+
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch("https://maz-backend-t1hy.onrender.com/api/v1/bots/maz_maifelz_live", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "X-MAZ-API-KEY": "maz_live_maifelz_prod_2026"
+        },
+        body: JSON.stringify({
+          brand_title: botTitle,
+          brand_subtitle: botSubtitle,
+          brand_color: brandColor,
+          welcome_message: welcomeMsg,
+          suggested_chips: chips,
+          escalation_message: escalationMsg
+        })
+      });
+
+      if (res.ok) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 4000);
+      } else {
+        const err = await res.json();
+        alert("Notice: " + (err.detail || "Could not save"));
+      }
+    } catch (e: any) {
+      alert("Save failed: " + e.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Knowledge State
   const [crawlUrl, setCrawlUrl] = useState("");
@@ -220,6 +272,23 @@ export default function CustomerBotStudio() {
                   onChange={(e) => setEscalationMsg(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500 text-xs"
                 />
+              </div>
+
+              <div className="pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={handleSaveChanges}
+                  disabled={isSaving}
+                  className={`w-full py-3 px-4 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition ${
+                    saveSuccess ? "bg-emerald-600 hover:bg-emerald-700" : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  <Save className="w-4 h-4" />
+                  {isSaving ? "Saving to Live Server..." : saveSuccess ? "✅ Changes Saved & Live on maifelz.com!" : "Save Changes to Live Website"}
+                </button>
+                <p className="text-[10px] text-slate-400 text-center mt-2">
+                  ⚡ Updates take effect immediately on your live website without needing to redeploy.
+                </p>
               </div>
             </div>
           </div>
