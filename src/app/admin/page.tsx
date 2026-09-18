@@ -138,8 +138,8 @@ export default function AdminControlPanel() {
             <span className="text-xs font-semibold text-slate-500">Captured Leads</span>
             <Flame className="w-4 h-4 text-rose-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">148 Leads</div>
-          <span className="text-[11px] text-rose-600 font-medium">🔥 42 Hot Deals ready for Odoo</span>
+          <div className="text-2xl font-black text-slate-900 mt-2">0 Leads</div>
+          <span className="text-[11px] text-emerald-600 font-medium">Ready for live traffic on maifelz.com</span>
         </div>
 
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -148,7 +148,7 @@ export default function AdminControlPanel() {
             <MessageSquare className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl font-black text-slate-900 mt-2">{tenants.reduce((acc, t) => acc + t.messages_used_this_month, 0)} msgs</div>
-          <span className="text-[11px] text-slate-400 font-medium">Platform running smooth</span>
+          <span className="text-[11px] text-slate-400 font-medium">Quota: 50,000 / month</span>
         </div>
       </div>
 
