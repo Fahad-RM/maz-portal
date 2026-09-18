@@ -19,7 +19,7 @@
     (window.location.hostname === "localhost" ? "http://localhost:8000" : "https://maz-backend-t1hy.onrender.com");
 
   if (!botId) {
-    console.error("[MAZ Widget] Missing "data-bot-id" attribute on script tag.");
+    console.error("[MAZ Widget] Missing 'data-bot-id' attribute on script tag.");
     return;
   }
 
