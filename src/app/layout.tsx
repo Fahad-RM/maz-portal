@@ -99,31 +99,36 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-blue-600 selection:text-white">
-        <header className="bg-slate-950/80 backdrop-blur-xl border-b border-white/10 sticky top-0 z-50">
+      <body className="min-h-screen flex flex-col bg-slate-950 text-slate-100 selection:bg-purple-600 selection:text-white">
+        <header className="bg-slate-950/85 backdrop-blur-xl border-b border-white/10 sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <a href="/" className="flex items-center gap-3 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white font-black text-xl shadow-md shadow-blue-500/20 group-hover:scale-105 transition">
-                M
-              </div>
-              <div className="flex flex-col">
-                <span className="text-lg font-black tracking-tight text-white flex items-center gap-1.5">
-                  MAZ <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 font-semibold border border-blue-500/30">by Maifelz</span>
-                </span>
-                <span className="text-[9px] text-slate-400 tracking-wider font-semibold">ENTERPRISE AI PLATFORM</span>
-              </div>
+              <img
+                src="/maz-logo.png"
+                alt="MAZ by Maifelz Technologies LLP"
+                className="h-7 sm:h-8 w-auto object-contain filter drop-shadow brightness-105 group-hover:scale-105 transition duration-200"
+              />
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-900/30 text-purple-300 border border-purple-500/30">
+                Enterprise AI Engine
+              </span>
             </a>
 
-            <nav className="flex items-center gap-2.5">
+            <nav className="flex items-center gap-2 sm:gap-3">
+              <a
+                href="/pricing"
+                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 transition flex items-center gap-1.5"
+              >
+                Pricing &amp; Plans
+              </a>
               <a
                 href="/admin"
-                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 border border-white/10 transition"
+                className="hidden sm:inline-flex px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/5 border border-white/10 transition"
               >
                 Super-Admin
               </a>
               <a
                 href="/dashboard"
-                className="px-4 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition shadow-sm shadow-blue-600/30"
+                className="px-4 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-800 hover:from-purple-600 hover:to-purple-700 text-white transition shadow-md shadow-purple-900/40"
               >
                 Customer Studio
               </a>
@@ -133,8 +138,22 @@ export default function RootLayout({
 
         <main className="flex-1">{children}</main>
 
-        <footer className="border-t border-white/10 bg-slate-950 py-6 text-center text-xs text-slate-500">
-          © 2026 Maifelz Technologies LLP. All rights reserved. • Built for teams that demand high-conversion AI agents.
+        <footer className="border-t border-white/10 bg-slate-950 py-8 text-center text-xs text-slate-500">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <img src="/maz-logo.png" alt="Maifelz" className="h-5 w-auto object-contain opacity-70" />
+              <span className="text-slate-400">© 2026 Maifelz Technologies LLP • Official Odoo ERP Partner</span>
+            </div>
+            <div className="flex items-center gap-4 text-slate-400">
+              <a href="/pricing" className="hover:text-purple-300 transition">Pricing</a>
+              <span>•</span>
+              <a href="/dashboard" className="hover:text-purple-300 transition">Customer Portal</a>
+              <span>•</span>
+              <a href="/admin" className="hover:text-purple-300 transition">Master Admin</a>
+              <span>•</span>
+              <a href="https://www.maifelz.com" target="_blank" rel="noreferrer" className="hover:text-purple-300 transition">Official Site</a>
+            </div>
+          </div>
         </footer>
       </body>
     </html>
