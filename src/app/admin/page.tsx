@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { 
   Users, Bot, Flame, MessageSquare, Plus, CheckCircle2, 
-  XCircle, Copy, Key, ArrowUpRight, Search, ShieldCheck 
+  XCircle, Copy, Key, ArrowUpRight, Search, ShieldCheck, Pencil 
 } from "lucide-react";
 
 interface TenantData {
@@ -41,12 +41,28 @@ export default function AdminControlPanel() {
 
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<TenantData | null>(null);
+
   const [newCompany, setNewCompany] = useState("");
   const [newContact, setNewContact] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPlan, setNewPlan] = useState("pro");
   const [newQuota, setNewQuota] = useState(5000);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const openEditModal = (t: TenantData) => {
+    setEditingTenant({ ...t });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateTenant = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTenant) return;
+    setTenants(tenants.map(t => t.id === editingTenant.id ? editingTenant : t));
+    setShowEditModal(false);
+    setEditingTenant(null);
+  };
 
   const handleCreateTenant = (e: React.FormEvent) => {
     e.preventDefault();
@@ -240,16 +256,32 @@ export default function AdminControlPanel() {
                       )}
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <button
-                        onClick={() => toggleStatus(t.id)}
-                        className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition ${
-                          t.is_active 
-                            ? "border-slate-300 hover:bg-slate-100 text-slate-600" 
-                            : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                        }`}
-                      >
-                        {t.is_active ? "Suspend" : "Reactivate"}
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <a
+                          href="/dashboard"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition"
+                          title="Open Bot Studio for Knowledge, Appearance & Leads"
+                        >
+                          Studio <ArrowUpRight className="w-3 h-3" />
+                        </a>
+                        <button
+                          onClick={() => openEditModal(t)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold border border-slate-200 hover:bg-slate-100 text-slate-700 transition"
+                          title="Edit Client details & quotas"
+                        >
+                          <Pencil className="w-3 h-3" /> Edit
+                        </button>
+                        <button
+                          onClick={() => toggleStatus(t.id)}
+                          className={`px-2.5 py-1 rounded-md text-[11px] font-semibold border transition ${
+                            t.is_active 
+                              ? "border-slate-300 hover:bg-slate-100 text-slate-600" 
+                              : "border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          }`}
+                        >
+                          {t.is_active ? "Suspend" : "Reactivate"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -342,6 +374,109 @@ export default function AdminControlPanel() {
                   className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition"
                 >
                   Create Customer Seat
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Customer Seat Modal */}
+      {showEditModal && editingTenant && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <h3 className="text-lg font-bold text-slate-900 mb-1">Edit Client Details & Quotas</h3>
+            <p className="text-xs text-slate-500 mb-5">
+              Update organization profile, tier limits, or monthly message allocations for this client.
+            </p>
+
+            <form onSubmit={handleUpdateTenant} className="space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Client / Company Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editingTenant.company_name}
+                  onChange={(e) => setEditingTenant({ ...editingTenant, company_name: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Contact Person</label>
+                <input
+                  type="text"
+                  value={editingTenant.contact_name}
+                  onChange={(e) => setEditingTenant({ ...editingTenant, contact_name: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Primary Email</label>
+                <input
+                  type="email"
+                  required
+                  value={editingTenant.email}
+                  onChange={(e) => setEditingTenant({ ...editingTenant, email: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Plan Tier</label>
+                  <select
+                    value={editingTenant.plan_tier}
+                    onChange={(e) => setEditingTenant({ ...editingTenant, plan_tier: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none bg-white font-medium"
+                  >
+                    <option value="starter">Starter</option>
+                    <option value="pro">Pro</option>
+                    <option value="enterprise">Enterprise</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Max Bots Allowed</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editingTenant.max_bots}
+                    onChange={(e) => setEditingTenant({ ...editingTenant, max_bots: Number(e.target.value) })}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Monthly Message Limit</label>
+                <input
+                  type="number"
+                  min="100"
+                  step="500"
+                  value={editingTenant.max_messages_per_month}
+                  onChange={(e) => setEditingTenant({ ...editingTenant, max_messages_per_month: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg outline-none"
+                />
+              </div>
+
+              <div className="pt-4 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditModal(false);
+                    setEditingTenant(null);
+                  }}
+                  className="px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-100 font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition shadow-sm"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>
