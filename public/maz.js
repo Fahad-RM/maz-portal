@@ -1,6 +1,6 @@
 /**
  * MAZ Universal Embeddable AI Widget
- * Ultra-Premium Glassmorphism & Smooth Letter Streaming
+ * Ultra-Premium Glassmorphism, Animated Smiling Mascot & Proactive Engagement
  * Copyright (c) 2026 Maifel Technologies LLP
  * https://maifeltechnologies.com
  */
@@ -12,16 +12,20 @@
 
   const currentScript =
     document.currentScript ||
-    document.querySelector('script[data-bot-id]');
+    document.querySelector("script[data-bot-id]");
 
   const botId = currentScript ? currentScript.getAttribute("data-bot-id") : null;
   const apiHost = (currentScript ? currentScript.getAttribute("data-api-host") : null) || 
     (window.location.hostname === "localhost" ? "http://localhost:8000" : "https://maz-backend-t1hy.onrender.com");
 
   if (!botId) {
-    console.error("[MAZ Widget] Missing 'data-bot-id' attribute on script tag.");
+    console.error("[MAZ Widget] Missing "data-bot-id" attribute on script tag.");
     return;
   }
+
+  const scriptPosition = (currentScript ? currentScript.getAttribute("data-position") : null) || "right";
+  const scriptOffsetBottom = (currentScript ? currentScript.getAttribute("data-offset-bottom") : null) || "24px";
+  const customTeaserText = (currentScript ? currentScript.getAttribute("data-teaser-text") : null) || "Ask me, I will help you! 😊";
 
   let sessionToken = localStorage.getItem("maz_session_token_" + botId);
   if (!sessionToken) {
@@ -42,6 +46,7 @@
   let isOpen = false;
   let conversationHistory = [];
   let isStreaming = false;
+  let teaserAutoCloseTimer = null;
 
   // Markdown Formatter (Converts **bold**, *italic*, bullets to clean safe HTML)
   function formatMarkdown(text) {
@@ -51,31 +56,96 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
 
-    // Clean up excessive awkward bold start greetings
-    formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong style="font-weight:700;color:inherit;">$1</strong>');
-    formatted = formatted.replace(/\*([^*]+)\*/g, '<em style="font-style:italic;">$1</em>');
-    formatted = formatted.replace(/`([^`]+)`/g, '<code style="background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px;">$1</code>');
-    formatted = formatted.replace(/^\s*[-•]\s+(.*)$/gm, '<div style="display:flex;align-items:flex-start;gap:6px;margin:3px 0;"><span style="color:#831843;font-size:14px;line-height:1.2;">•</span><span>$1</span></div>');
-    formatted = formatted.replace(/\n\n/g, '<div style="height:8px;"></div>');
-    formatted = formatted.replace(/\n/g, '<br/>');
+    formatted = formatted.replace(/\*\*([^*]+)\*\*/g, "<strong style=\"font-weight:700;color:inherit;\">$1</strong>");
+    formatted = formatted.replace(/\*([^*]+)\*/g, "<em style=\"font-style:italic;\">$1</em>");
+    formatted = formatted.replace(/`([^`]+)`/g, "<code style=\"background:rgba(0,0,0,0.06);padding:1px 5px;border-radius:4px;font-family:monospace;font-size:12px;\">$1</code>");
+    formatted = formatted.replace(/^\s*[-•]\s+(.*)$/gm, "<div style=\"display:flex;align-items:flex-start;gap:6px;margin:3px 0;\"><span style=\"color:#831843;font-size:14px;line-height:1.2;\">•</span><span>$1</span></div>");
+    formatted = formatted.replace(/\n\n/g, "<div style=\"height:8px;\"></div>");
+    formatted = formatted.replace(/\n/g, "<br/>");
     return formatted;
   }
 
-  // Inject Modern Glassmorphism CSS Styles
+  // Inject Modern Glassmorphism & Animation CSS
   const styleEl = document.createElement("style");
   styleEl.textContent = `
+    /* Physics Drop-Bounce Entrance */
+    @keyframes mazDropBounce {
+      0% {
+        opacity: 0;
+        transform: translateY(-160px) scale(0.6);
+      }
+      58% {
+        opacity: 1;
+        transform: translateY(14px) scale(1.08) rotate(3deg);
+      }
+      76% {
+        transform: translateY(-6px) scale(0.96) rotate(-2deg);
+      }
+      90% {
+        transform: translateY(2px) scale(1.02) rotate(1deg);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1) rotate(0deg);
+      }
+    }
+
+    /* Ambient Pulsing Glow */
     @keyframes mazFloatPulse {
-      0% { box-shadow: 0 8px 28px -4px rgba(131, 24, 67, 0.4), 0 0 0 0 rgba(131, 24, 67, 0.4); }
-      70% { box-shadow: 0 12px 36px -4px rgba(131, 24, 67, 0.45), 0 0 0 14px rgba(131, 24, 67, 0); }
-      100% { box-shadow: 0 8px 28px -4px rgba(131, 24, 67, 0.4), 0 0 0 0 rgba(131, 24, 67, 0); }
+      0% { box-shadow: 0 8px 26px -4px rgba(131, 24, 67, 0.45), 0 0 0 0 rgba(131, 24, 67, 0.4); }
+      70% { box-shadow: 0 12px 36px -4px rgba(131, 24, 67, 0.5), 0 0 0 14px rgba(131, 24, 67, 0); }
+      100% { box-shadow: 0 8px 26px -4px rgba(131, 24, 67, 0.45), 0 0 0 0 rgba(131, 24, 67, 0); }
     }
-    @keyframes mazFadeSlideUp {
-      from { opacity: 0; transform: translateY(14px) scale(0.97); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+
+    /* Mascot Wink & Smile Keyframes */
+    @keyframes mazEyeWink {
+      0%, 15%, 85%, 100% { transform: scaleY(1); }
+      45%, 55% { transform: scaleY(0.12); }
     }
-    @keyframes mazBubbleEnter {
-      from { opacity: 0; transform: translateY(8px) scale(0.98); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+    @keyframes mazSmileCheer {
+      0%, 100% { transform: scale(1); }
+      45%, 55% { transform: scale(1.18) translateY(-0.5px); }
+    }
+    .maz-mascot-eye-right {
+      transform-origin: 15px 9.5px;
+      animation: mazEyeWink 3.8s infinite 2.2s;
+    }
+    .maz-mascot-smile {
+      transform-origin: 12px 12.5px;
+      animation: mazSmileCheer 3.8s infinite 2.2s;
+    }
+
+    /* Notification Ping Badge */
+    .maz-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 3px 10px rgba(239, 68, 68, 0.5);
+      border: 2px solid #ffffff;
+      z-index: 10;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+    .maz-badge-ping {
+      position: absolute;
+      inset: -2px;
+      border-radius: 50%;
+      background: #ef4444;
+      opacity: 0.65;
+      animation: mazPing 2.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+      pointer-events: none;
+    }
+    @keyframes mazPing {
+      70%, 100% { transform: scale(1.9); opacity: 0; }
     }
 
     #maz-root * {
@@ -84,10 +154,11 @@
       -webkit-font-smoothing: antialiased;
     }
 
+    /* Launcher Button */
     #maz-launcher-btn {
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: ${scriptOffsetBottom};
+      ${scriptPosition === "left" ? "left: 24px;" : "right: 24px;"}
       width: 62px;
       height: 62px;
       border-radius: 50%;
@@ -97,21 +168,170 @@
       align-items: center;
       justify-content: center;
       z-index: 999999;
-      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-      border: 1px solid rgba(255, 255, 255, 0.3);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+      border: 1px solid rgba(255, 255, 255, 0.35);
       outline: none;
-      animation: mazFloatPulse 3s infinite;
+      animation: mazDropBounce 0.95s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards, mazFloatPulse 3s infinite 1.2s;
     }
     #maz-launcher-btn:hover {
       transform: scale(1.08) translateY(-2px);
       box-shadow: 0 16px 40px -4px rgba(131, 24, 67, 0.55);
     }
-    #maz-launcher-btn svg { width: 28px; height: 28px; fill: #ffffff; transition: transform 0.25s ease; }
+    #maz-launcher-btn svg { width: 30px; height: 30px; fill: #ffffff; transition: transform 0.25s ease; }
 
+    /* Proactive Teaser Speech Bubble */
+    @keyframes mazTeaserPop {
+      from { opacity: 0; transform: scale(0.88) translateY(14px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes mazTeaserFloat {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-4px); }
+    }
+
+    .maz-teaser {
+      position: fixed;
+      bottom: calc(${scriptOffsetBottom} + 4px);
+      ${scriptPosition === "left" ? "left: 98px;" : "right: 98px;"}
+      width: 310px;
+      max-width: calc(100vw - 40px);
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: 20px;
+      box-shadow: 
+        0 20px 48px -12px rgba(15, 23, 42, 0.22),
+        0 0 0 1px rgba(255, 255, 255, 0.95) inset,
+        0 8px 24px -4px rgba(0, 0, 0, 0.08);
+      z-index: 999998;
+      cursor: pointer;
+      opacity: 0;
+      transform: scale(0.88) translateY(14px);
+      pointer-events: none;
+      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .maz-teaser.maz-teaser-show {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+      pointer-events: auto;
+      animation: mazTeaserPop 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards, mazTeaserFloat 4s ease-in-out infinite 0.4s;
+    }
+    /* Pointer tail pointing to launcher */
+    .maz-teaser::after {
+      content: "";
+      position: absolute;
+      ${scriptPosition === "left" ? "left: -7px; border-left: 1px solid rgba(255, 255, 255, 0.9); border-bottom: 1px solid rgba(255, 255, 255, 0.9);" : "right: -7px; border-top: 1px solid rgba(255, 255, 255, 0.9); border-right: 1px solid rgba(255, 255, 255, 0.9);"}
+      bottom: 22px;
+      width: 14px;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.94);
+      transform: rotate(45deg);
+      border-radius: 2px;
+    }
+    .maz-teaser-close {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.06);
+      border: none;
+      font-size: 15px;
+      line-height: 1;
+      color: #64748b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      z-index: 2;
+    }
+    .maz-teaser-close:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      transform: scale(1.1);
+    }
+    .maz-teaser-main {
+      padding: 14px 16px 14px 16px;
+    }
+    .maz-teaser-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .maz-teaser-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #831843 0%, #9d174d 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 4px 10px rgba(131, 24, 67, 0.3);
+      flex-shrink: 0;
+    }
+    .maz-teaser-meta { flex: 1; overflow: hidden; }
+    .maz-teaser-name {
+      font-weight: 700;
+      font-size: 13px;
+      color: #0f172a;
+      line-height: 1.2;
+    }
+    .maz-teaser-status {
+      font-size: 10.5px;
+      color: #059669;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 2px;
+    }
+    .maz-teaser-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+    }
+    .maz-teaser-text {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #1e293b;
+      line-height: 1.35;
+      margin-bottom: 10px;
+    }
+    .maz-teaser-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .maz-t-chip {
+      background: rgba(131, 24, 67, 0.08);
+      color: #831843;
+      border: 1px solid rgba(131, 24, 67, 0.15);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .maz-t-chip:hover {
+      background: #831843;
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(131, 24, 67, 0.25);
+    }
+
+    /* Glassmorphism Chat Panel */
     #maz-chat-panel {
       position: fixed;
-      bottom: 98px;
-      right: 24px;
+      bottom: calc(${scriptOffsetBottom} + 74px);
+      ${scriptPosition === "left" ? "left: 24px;" : "right: 24px;"}
       width: 400px;
       height: 610px;
       max-width: calc(100vw - 32px);
@@ -119,10 +339,10 @@
       background: rgba(255, 255, 255, 0.88);
       backdrop-filter: blur(28px) saturate(180%);
       -webkit-backdrop-filter: blur(28px) saturate(180%);
-      border: 1px solid rgba(255, 255, 255, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.85);
       border-radius: 26px;
       box-shadow: 
-        0 28px 64px -16px rgba(15, 23, 42, 0.2), 
+        0 28px 64px -16px rgba(15, 23, 42, 0.22), 
         0 0 0 1px rgba(255, 255, 255, 0.9) inset, 
         0 8px 24px -4px rgba(0, 0, 0, 0.05);
       display: flex;
@@ -200,36 +420,39 @@
       background: rgba(248, 250, 252, 0.6);
       display: flex;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
       scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
     }
-    .maz-body::-webkit-scrollbar { width: 5px; }
-    .maz-body::-webkit-scrollbar-thumb { background: rgba(203, 213, 225, 0.6); border-radius: 10px; }
+
+    @keyframes mazBubbleEnter {
+      from { opacity: 0; transform: translateY(8px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
 
     .maz-bubble {
-      max-width: 86%;
-      padding: 13px 16px;
-      font-size: 13.5px;
-      line-height: 1.55;
+      max-width: 84%;
+      padding: 12px 16px;
       border-radius: 18px;
-      word-wrap: break-word;
-      animation: mazBubbleEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      font-size: 13.5px;
+      line-height: 1.5;
+      word-break: break-word;
+      animation: mazBubbleEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     .maz-bubble-bot {
+      align-self: flex-start;
       background: rgba(255, 255, 255, 0.95);
       color: #1e293b;
-      align-self: flex-start;
+      border: 1px solid rgba(226, 232, 240, 0.85);
       border-bottom-left-radius: 4px;
-      box-shadow: 
-        0 4px 16px -2px rgba(15, 23, 42, 0.05),
-        0 0 0 1px rgba(226, 232, 240, 0.8) inset;
+      box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.05);
     }
     .maz-bubble-user {
+      align-self: flex-end;
       background: linear-gradient(135deg, #831843 0%, #9d174d 100%);
       color: #ffffff;
-      align-self: flex-end;
       border-bottom-right-radius: 4px;
-      box-shadow: 0 6px 18px -2px rgba(131, 24, 67, 0.32);
+      box-shadow: 0 4px 14px rgba(131, 24, 67, 0.28);
     }
 
     .maz-chips {
@@ -239,93 +462,100 @@
       margin-top: 4px;
     }
     .maz-chip {
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.85);
+      border: 1px solid rgba(131, 24, 67, 0.2);
       color: #831843;
+      padding: 6px 12px;
+      border-radius: 9999px;
       font-size: 11.5px;
       font-weight: 600;
-      padding: 7px 13px;
-      border-radius: 20px;
-      border: 1px solid rgba(131, 24, 67, 0.18);
       cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.03);
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
     }
     .maz-chip:hover {
       background: #831843;
       color: #ffffff;
-      transform: translateY(-2px);
-      box-shadow: 0 6px 14px rgba(131, 24, 67, 0.25);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(131, 24, 67, 0.25);
     }
 
     .maz-typing {
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 10px 14px;
+      border-radius: 16px;
+      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(226, 232, 240, 0.8);
       display: flex;
       gap: 5px;
-      padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.95);
-      border: 1px solid rgba(226, 232, 240, 0.8);
-      border-radius: 18px;
-      border-bottom-left-radius: 4px;
-      align-self: flex-start;
-      width: fit-content;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
     }
     .maz-typing-dot {
       width: 6px;
       height: 6px;
-      background: #9d174d;
+      background: #831843;
+      opacity: 0.5;
       border-radius: 50%;
-      animation: mazBounce 1.2s infinite ease-in-out;
+      animation: mazTypingBounce 1.3s infinite ease-in-out;
     }
     .maz-typing-dot:nth-child(2) { animation-delay: 0.2s; }
     .maz-typing-dot:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes mazBounce { 0%, 80%, 100% { transform: scale(0); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+
+    @keyframes mazTypingBounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40% { transform: translateY(-5px); opacity: 1; }
+    }
 
     .maz-lead-card {
-      background: rgba(255, 255, 255, 0.95);
-      border: 1px solid rgba(203, 213, 225, 0.8);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(254, 242, 242, 0.8) 100%);
+      border: 1px solid rgba(131, 24, 67, 0.2);
       border-radius: 16px;
       padding: 14px;
-      margin-top: 4px;
-      box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.08);
-      animation: mazBubbleEnter 0.3s ease;
+      margin-top: 6px;
+      box-shadow: 0 6px 18px -4px rgba(131, 24, 67, 0.1);
     }
-    .maz-lead-card h4 { margin: 0 0 8px 0; font-size: 13px; font-weight: 700; color: #1e293b; }
+    .maz-lead-card h4 {
+      margin: 0 0 8px 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: #831843;
+    }
     .maz-lead-input {
       width: 100%;
-      padding: 9px 12px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(203, 213, 225, 0.8);
+      background: #ffffff;
       font-size: 12px;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
       outline: none;
-      background: #f8fafc;
-      transition: all 0.2s;
+      transition: border-color 0.2s;
     }
     .maz-lead-input:focus {
       border-color: #831843;
-      background: #ffffff;
-      box-shadow: 0 0 0 3px rgba(131, 24, 67, 0.12);
+      box-shadow: 0 0 0 2px rgba(131, 24, 67, 0.1);
     }
     .maz-lead-btn {
       width: 100%;
       padding: 9px;
+      border-radius: 8px;
       background: linear-gradient(135deg, #831843 0%, #9d174d 100%);
-      color: #fff;
+      color: #ffffff;
       font-size: 12px;
       font-weight: 700;
-      border-radius: 10px;
       border: none;
       cursor: pointer;
-      box-shadow: 0 4px 12px rgba(131, 24, 67, 0.25);
-      transition: all 0.2s;
+      transition: opacity 0.2s;
+      box-shadow: 0 3px 10px rgba(131, 24, 67, 0.25);
     }
-    .maz-lead-btn:hover { opacity: 0.95; transform: translateY(-1px); }
+    .maz-lead-btn:hover { opacity: 0.95; }
 
     .maz-footer {
       padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(16px);
-      border-top: 1px solid rgba(226, 232, 240, 0.8);
+      background: rgba(255, 255, 255, 0.92);
+      border-top: 1px solid rgba(226, 232, 240, 0.85);
       display: flex;
       align-items: center;
       gap: 10px;
@@ -335,7 +565,7 @@
       border: 1px solid rgba(203, 213, 225, 0.8);
       border-radius: 9999px;
       padding: 10px 18px;
-      font-size: 13px;
+      font-size: 13.5px;
       outline: none;
       background: rgba(241, 245, 249, 0.7);
       transition: all 0.2s ease;
@@ -371,12 +601,54 @@
       font-size: 10.5px;
       color: #94a3b8;
       padding: 6px 0 8px 0;
-      background: rgba(255, 255, 255, 0.85);
+      background: rgba(255, 255, 255, 0.88);
       border-top: 1px solid rgba(241, 245, 249, 0.8);
       letter-spacing: 0.02em;
     }
     .maz-branding a { color: #64748b; text-decoration: none; font-weight: 700; transition: color 0.15s; }
     .maz-branding a:hover { color: #831843; }
+
+    /* Mobile Responsive Overrides */
+    @media (max-width: 640px) {
+      #maz-launcher-btn {
+        bottom: 16px !important;
+        ${scriptPosition === "left" ? "left: 16px !important;" : "right: 16px !important;"}
+        width: 56px !important;
+        height: 56px !important;
+      }
+      #maz-launcher-btn svg { width: 26px !important; height: 26px !important; }
+      .maz-badge {
+        top: -2px !important;
+        right: -2px !important;
+        width: 18px !important;
+        height: 18px !important;
+        font-size: 10px !important;
+      }
+      .maz-teaser {
+        bottom: 84px !important;
+        ${scriptPosition === "left" ? "left: 16px !important; right: auto !important;" : "right: 16px !important; left: auto !important;"}
+        width: calc(100vw - 32px) !important;
+        max-width: 320px !important;
+      }
+      .maz-teaser::after {
+        ${scriptPosition === "left" ? "left: 22px !important;" : "right: 22px !important;"}
+        bottom: -7px !important;
+        top: auto !important;
+        transform: rotate(135deg) !important;
+      }
+      #maz-chat-panel {
+        bottom: 10px !important;
+        right: 8px !important;
+        left: 8px !important;
+        width: calc(100vw - 16px) !important;
+        height: calc(100vh - 20px) !important;
+        max-height: 580px !important;
+        border-radius: 22px !important;
+      }
+      .maz-input {
+        font-size: 15px !important;
+      }
+    }
   `;
   document.head.appendChild(styleEl);
 
@@ -385,11 +657,59 @@
   root.id = "maz-root";
 
   root.innerHTML = `
+    <!-- Floating Proactive Engagement Teaser Card -->
+    <div id="maz-teaser" class="maz-teaser" role="dialog" aria-label="Quick assistant help">
+      <button id="maz-teaser-close" class="maz-teaser-close" aria-label="Dismiss">&times;</button>
+      <div id="maz-teaser-main" class="maz-teaser-main">
+        <div class="maz-teaser-top">
+          <div class="maz-teaser-avatar">
+            <span>👋</span>
+          </div>
+          <div class="maz-teaser-meta">
+            <div class="maz-teaser-name" id="maz-teaser-name">Maifelz AI Assistant</div>
+            <div class="maz-teaser-status">
+              <span class="maz-teaser-dot"></span>
+              <span>Online • Instant Reply</span>
+            </div>
+          </div>
+        </div>
+        <div class="maz-teaser-text" id="maz-teaser-text">
+          ${customTeaserText}
+        </div>
+        <div class="maz-teaser-chips" id="maz-teaser-chips">
+          <button class="maz-t-chip" data-q="What services does Maifelz provide?">⚡ Services</button>
+          <button class="maz-t-chip" data-q="Tell me about Odoo ERP implementation">💼 Odoo ERP</button>
+          <button class="maz-t-chip" data-q="I want a free consultation">📅 Free Consultation</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Launcher Button with Drop-Bounce & Smiling Mascot -->
     <button id="maz-launcher-btn" aria-label="Open chat assistant">
-      <svg id="maz-icon-open" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
-      <svg id="maz-icon-close" viewBox="0 0 24 24" style="display:none;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+      <!-- Notification Badge -->
+      <span id="maz-badge" class="maz-badge">
+        <span class="maz-badge-ping"></span>
+        <span class="maz-badge-dot">1</span>
+      </span>
+
+      <!-- Mascot Chat Icon with Smile & Wink -->
+      <svg id="maz-icon-open" class="maz-mascot-svg" viewBox="0 0 24 24">
+        <!-- Friendly Chat Bubble -->
+        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="#ffffff"/>
+        <!-- Eyes: Left & Right -->
+        <circle cx="9" cy="9.5" r="1.3" fill="#831843" class="maz-mascot-eye maz-mascot-eye-left" id="maz-eye-l"/>
+        <circle cx="15" cy="9.5" r="1.3" fill="#831843" class="maz-mascot-eye maz-mascot-eye-right" id="maz-eye-r"/>
+        <!-- Smiling Mouth -->
+        <path d="M9.2 12.2c.7.9 1.7 1.4 2.8 1.4s2.1-.5 2.8-1.4" stroke="#831843" stroke-width="1.5" stroke-linecap="round" fill="none" class="maz-mascot-smile" id="maz-smile-path"/>
+      </svg>
+
+      <!-- Close X Icon -->
+      <svg id="maz-icon-close" viewBox="0 0 24 24" style="display:none;">
+        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+      </svg>
     </button>
 
+    <!-- Chat Window Panel -->
     <div id="maz-chat-panel">
       <div class="maz-header" id="maz-header">
         <div class="maz-header-info">
@@ -431,6 +751,10 @@
   const chatBody = document.getElementById("maz-body");
   const inputEl = document.getElementById("maz-input");
   const sendBtn = document.getElementById("maz-send");
+  const teaserEl = document.getElementById("maz-teaser");
+  const teaserCloseBtn = document.getElementById("maz-teaser-close");
+  const teaserMain = document.getElementById("maz-teaser-main");
+  const badgeEl = document.getElementById("maz-badge");
 
   // Fetch Live Bot Config
   fetch(`${apiHost}/api/v1/chat/config/${botId}`)
@@ -449,14 +773,67 @@
       launcherBtn.style.background = `linear-gradient(135deg, ${botConfig.brand_color} 0%, #1e293b 140%)`;
       document.getElementById("maz-header").style.background = `linear-gradient(135deg, ${botConfig.brand_color} 0%, #1e293b 140%)`;
       sendBtn.style.background = botConfig.brand_color;
+      const eyeL = document.getElementById("maz-eye-l");
+      const eyeR = document.getElementById("maz-eye-r");
+      const smile = document.getElementById("maz-smile-path");
+      if (eyeL) eyeL.setAttribute("fill", botConfig.brand_color);
+      if (eyeR) eyeR.setAttribute("fill", botConfig.brand_color);
+      if (smile) smile.setAttribute("stroke", botConfig.brand_color);
     }
     if (botConfig.brand_title) {
       document.getElementById("maz-title").textContent = botConfig.brand_title;
       document.getElementById("maz-avatar").textContent = botConfig.brand_title.charAt(0);
+      const teaserTitle = document.getElementById("maz-teaser-name");
+      if (teaserTitle) teaserTitle.textContent = botConfig.brand_title;
     }
     if (botConfig.brand_subtitle) document.getElementById("maz-subtitle").textContent = botConfig.brand_subtitle;
     if (botConfig.placeholder_text) inputEl.placeholder = botConfig.placeholder_text;
   }
+
+  // Teaser Display Handling
+  function showTeaser() {
+    if (isOpen || sessionStorage.getItem("maz_teaser_closed_" + botId)) return;
+    teaserEl.classList.add("maz-teaser-show");
+
+    teaserAutoCloseTimer = setTimeout(() => {
+      hideTeaser();
+    }, 20000);
+  }
+
+  function hideTeaser() {
+    teaserEl.classList.remove("maz-teaser-show");
+    if (teaserAutoCloseTimer) clearTimeout(teaserAutoCloseTimer);
+  }
+
+  // Show teaser smoothly after drop animation settles (1.8s)
+  setTimeout(() => {
+    showTeaser();
+  }, 1800);
+
+  teaserCloseBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    hideTeaser();
+    sessionStorage.setItem("maz_teaser_closed_" + botId, "1");
+  });
+
+  teaserMain.addEventListener("click", (e) => {
+    const chip = e.target.closest(".maz-t-chip");
+    if (chip) {
+      const q = chip.getAttribute("data-q");
+      hideTeaser();
+      sessionStorage.setItem("maz_teaser_closed_" + botId, "1");
+      if (!isOpen) toggleChat();
+      setTimeout(() => {
+        inputEl.value = q;
+        sendMessage();
+      }, 300);
+      return;
+    }
+
+    hideTeaser();
+    sessionStorage.setItem("maz_teaser_closed_" + botId, "1");
+    if (!isOpen) toggleChat();
+  });
 
   function toggleChat() {
     isOpen = !isOpen;
@@ -464,6 +841,8 @@
       chatPanel.classList.add("maz-open");
       iconOpen.style.display = "none";
       iconClose.style.display = "block";
+      hideTeaser();
+      if (badgeEl) badgeEl.style.display = "none";
       setTimeout(() => inputEl.focus(), 200);
     } else {
       chatPanel.classList.remove("maz-open");
@@ -519,7 +898,7 @@
     const typing = document.createElement("div");
     typing.id = "maz-typing-indicator";
     typing.className = "maz-typing";
-    typing.innerHTML = '<span class="maz-typing-dot"></span><span class="maz-typing-dot"></span><span class="maz-typing-dot"></span>';
+    typing.innerHTML = "<span class=\"maz-typing-dot\"></span><span class=\"maz-typing-dot\"></span><span class=\"maz-typing-dot\"></span>";
     chatBody.appendChild(typing);
     chatBody.scrollTop = chatBody.scrollHeight;
     return typing;
@@ -568,10 +947,10 @@
       })
       .then(r => r.json())
       .then(() => {
-        card.innerHTML = `<div style="color:#059669; font-weight:700; font-size:13px; padding:4px 0;">✅ Thank you! Our lead consultant will reach out to you shortly.</div>`;
+        card.innerHTML = "<div style=\"color:#059669; font-weight:700; font-size:13px; padding:4px 0;\">✅ Thank you! Our lead consultant will reach out to you shortly.</div>";
       })
       .catch(() => {
-        card.innerHTML = `<div style="color:#dc2626; font-size:12px;">Notice: Could not submit. Please try again.</div>`;
+        card.innerHTML = "<div style=\"color:#dc2626; font-size:12px;\">Notice: Could not submit. Please try again.</div>";
       });
     };
   }
@@ -595,7 +974,6 @@
 
     step() {
       if (this.queue.length > 0) {
-        // Dynamic speed based on buffer size
         const speed = this.queue.length > 30 ? 3 : this.queue.length > 10 ? 2 : 1;
         this.displayed += this.queue.slice(0, speed);
         this.queue = this.queue.slice(speed);
@@ -674,11 +1052,9 @@
         }
       }
 
-      // Finish smooth typing
       typewriter.flush();
       conversationHistory.push({ role: "assistant", content: fullAssistantText });
 
-      // Offer Lead Capture if relevant intent
       const lower = text.toLowerCase();
       if (lower.includes("price") || lower.includes("cost") || lower.includes("talk") || lower.includes("demo") || lower.includes("quote") || conversationHistory.length >= 4) {
         setTimeout(offerLeadCapture, 800);
