@@ -1829,7 +1829,9 @@ export default function CustomerBotStudio() {
                     {odooReport.model_label} (
                     {(odooReport.total_found ?? odooReport.records?.length ?? 0).toLocaleString()} Total Records
                     {odooReport.records && odooReport.records.length > 0 && !odooReport.is_count_only
-                      ? `, Showing ${odooReport.records.length}`
+                      ? odooReport.is_grouped
+                        ? `, ${odooReport.records.length} Breakdown Rows`
+                        : `, Showing ${odooReport.records.length}`
                       : ""}
                     )
                   </h3>
