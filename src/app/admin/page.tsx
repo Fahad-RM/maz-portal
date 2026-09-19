@@ -463,49 +463,57 @@ Log in to customize your AI assistant, manage company knowledge, view customer l
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white/95 backdrop-blur-md p-5 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow transition">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Active Customer Seats</span>
-            <Users className="w-4 h-4 text-blue-600" />
+            <span className="text-xs font-bold text-slate-600">Active Customer Seats</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
           </div>
           <div className="text-2xl font-black text-slate-900 mt-2">
             {metrics.active_tenants} / {metrics.total_tenants}
           </div>
-          <span className="text-[11px] text-emerald-600 font-medium">Isolated multi-tenant database</span>
+          <span className="text-[11px] text-emerald-600 font-semibold">Isolated multi-tenant database</span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white/95 backdrop-blur-md p-5 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow transition">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Live AI Chatbots</span>
-            <Bot className="w-4 h-4 text-indigo-600" />
+            <span className="text-xs font-bold text-slate-600">Live AI Chatbots</span>
+            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+              <Bot className="w-4 h-4" />
+            </div>
           </div>
           <div className="text-2xl font-black text-slate-900 mt-2">{metrics.total_bots} Active</div>
-          <span className="text-[11px] text-slate-400 font-medium">Auto-trained with RAG embeddings</span>
+          <span className="text-[11px] text-slate-500 font-medium">Auto-trained with RAG embeddings</span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white/95 backdrop-blur-md p-5 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow transition">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Captured Leads</span>
-            <Flame className="w-4 h-4 text-rose-600" />
+            <span className="text-xs font-bold text-slate-600">Captured Leads</span>
+            <div className="w-8 h-8 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+              <Flame className="w-4 h-4" />
+            </div>
           </div>
           <div className="text-2xl font-black text-slate-900 mt-2">{metrics.total_leads} Leads</div>
-          <span className="text-[11px] text-emerald-600 font-medium">Live traffic synced</span>
+          <span className="text-[11px] text-purple-700 font-semibold">Live traffic synced</span>
         </div>
 
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white/95 backdrop-blur-md p-5 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow transition">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500">Monthly Message Volume</span>
-            <MessageSquare className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-bold text-slate-600">Monthly Message Volume</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <MessageSquare className="w-4 h-4" />
+            </div>
           </div>
           <div className="text-2xl font-black text-slate-900 mt-2">
             {tenants.reduce((acc, t) => acc + (t.messages_used_this_month || 0), 0).toLocaleString()} msgs
           </div>
-          <span className="text-[11px] text-slate-400 font-medium">Across all client seats</span>
+          <span className="text-[11px] text-slate-500 font-medium">Across all client seats</span>
         </div>
       </div>
 
       {/* Customer Seats Table Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-3xl shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-bold text-slate-900">Provisioned Client Accounts</h2>

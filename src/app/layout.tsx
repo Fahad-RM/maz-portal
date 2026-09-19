@@ -100,17 +100,17 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-purple-600 selection:text-white relative">
-        {/* Fixed Professional Enterprise Background Image with Clearer Visibility */}
+        {/* Fixed Enterprise Background Image with Crisp Readability */}
         <div 
-          className="fixed inset-0 pointer-events-none z-0 bg-cover bg-center bg-no-repeat opacity-40 mix-blend-multiply transition-opacity duration-500"
+          className="fixed inset-0 pointer-events-none z-0 bg-cover bg-center bg-no-repeat opacity-[0.16] mix-blend-multiply"
           style={{ backgroundImage: "url('/bg-enterprise.jpg')" }}
           aria-hidden
         />
-        {/* Soft overlay gradient to ensure clean readability */}
-        <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-b from-white/60 via-white/30 to-purple-50/50" aria-hidden />
+        {/* Soft daylight gradient overlay */}
+        <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-b from-white/80 via-white/50 to-slate-50/80" aria-hidden />
 
         <div className="sticky top-0 z-50 flex justify-center px-4 pt-3 pb-0 pointer-events-none">
-          <header className="pointer-events-auto w-full max-w-5xl bg-white/85 backdrop-blur-2xl border border-slate-200/80 rounded-2xl shadow-lg shadow-slate-900/[0.06] px-4 sm:px-6 h-14 flex items-center justify-between transition-all duration-300">
+          <header className="pointer-events-auto w-full max-w-5xl bg-white/90 backdrop-blur-2xl border border-slate-200/80 rounded-2xl shadow-lg shadow-slate-900/[0.06] px-4 sm:px-6 h-14 flex items-center justify-between transition-all duration-300">
             <a href="/" className="flex items-center gap-2.5 group">
               <img
                 src="/maz-logo.png"
@@ -145,22 +145,22 @@ export default function RootLayout({
           </header>
         </div>
 
-        <main className="flex-1 pt-2">{children}</main>
+        <main className="flex-1 pt-2 relative z-10">{children}</main>
 
-        <footer className="relative z-10 border-t border-slate-200/60 bg-white/80 backdrop-blur-md py-4 text-center text-xs text-slate-500">
+        <footer className="relative z-10 border-t border-slate-200/80 bg-white/90 backdrop-blur-md py-4 text-center text-xs text-slate-600">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <img src="/maz-logo.png" alt="Maifelz" className="h-4.5 w-auto object-contain opacity-80" />
-              <span className="text-slate-600 font-medium text-[11px]">© 2026 Maifelz Technologies LLP • Official Odoo ERP Partner</span>
+              <img src="/maz-logo.png" alt="Maifelz" className="h-6 w-auto max-h-6 object-contain shrink-0" />
+              <span className="text-slate-700 font-semibold text-xs">© 2026 Maifelz Technologies LLP • Official Odoo ERP Partner</span>
             </div>
-            <div className="flex items-center gap-4 text-slate-600 text-[11px]">
-              <a href="/pricing" className="hover:text-purple-700 font-medium transition">Pricing</a>
+            <div className="flex items-center gap-4 text-slate-600 text-xs">
+              <a href="/pricing" className="hover:text-purple-700 font-semibold transition">Pricing</a>
               <span>•</span>
-              <a href="/dashboard" className="hover:text-purple-700 font-medium transition">Customer Portal</a>
+              <a href="/dashboard" className="hover:text-purple-700 font-semibold transition">Customer Portal</a>
               <span>•</span>
-              <a href="/admin" className="hover:text-purple-700 font-medium transition">Master Admin</a>
+              <a href="/admin" className="hover:text-purple-700 font-semibold transition">Master Admin</a>
               <span>•</span>
-              <a href="https://www.maifelz.com" target="_blank" rel="noreferrer" className="hover:text-purple-700 font-medium transition">Official Site</a>
+              <a href="https://www.maifelz.com" target="_blank" rel="noreferrer" className="hover:text-purple-700 font-semibold transition">Official Site</a>
             </div>
           </div>
         </footer>
