@@ -86,8 +86,6 @@ const jsonLd = {
   ]
 };
 
-import SmokeCanvas from "@/components/SmokeCanvas";
-
 export default function RootLayout({
   children,
 }: {
@@ -101,9 +99,15 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50/20 text-slate-900 selection:bg-purple-600 selection:text-white">
-        {/* Organic smoke that follows the mouse */}
-        <SmokeCanvas />
+      <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-purple-600 selection:text-white relative">
+        {/* Fixed Professional Enterprise Background Image with Reduced Opacity */}
+        <div 
+          className="fixed inset-0 pointer-events-none z-0 bg-cover bg-center bg-no-repeat opacity-[0.14] mix-blend-multiply"
+          style={{ backgroundImage: "url('/bg-enterprise.jpg')" }}
+          aria-hidden
+        />
+        {/* Soft overlay gradient */}
+        <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-br from-white/70 via-transparent to-purple-50/40" aria-hidden />
 
         <div className="sticky top-0 z-50 flex justify-center px-4 pt-3 pb-0 pointer-events-none">
           <header className="pointer-events-auto w-full max-w-5xl bg-white/85 backdrop-blur-2xl border border-slate-200/80 rounded-2xl shadow-lg shadow-slate-900/[0.06] px-4 sm:px-6 h-14 flex items-center justify-between transition-all duration-300">
