@@ -351,10 +351,10 @@ Log in to customize your AI assistant, manage company knowledge, view customer l
   // If not authenticated, require password entry
   if (!isAuthenticated) {
     return (
-      <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-b from-slate-50 via-white to-purple-50/30 flex flex-col items-center justify-center px-4 py-12">
-        <div className="max-w-md w-full">
+      <div className="min-h-[calc(100vh-8rem)] flex flex-col items-center justify-center px-4 py-8 relative">
+        <div className="max-w-md w-full animate-fade-up">
           <div className="text-center mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center mx-auto mb-3 border border-purple-200 shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center mx-auto mb-3 border border-purple-200/80 shadow-md shadow-purple-900/10">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <h2 className="text-xl font-black text-slate-900">Super-Admin Authorization</h2>
@@ -363,9 +363,15 @@ Log in to customize your AI assistant, manage company knowledge, view customer l
             </p>
           </div>
 
-          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-xl shadow-purple-950/5">
+          {/* Ultra-Glossy 3D Glass Bubble Card */}
+          <div className="bg-white/75 backdrop-blur-3xl rounded-[32px] p-6 sm:p-8 border border-white/80 shadow-[0_20px_50px_rgba(115,22,91,0.12),0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_1px_rgba(255,255,255,0.9),inset_0_-1px_1px_rgba(115,22,91,0.05)] relative overflow-hidden transition-all duration-300">
+            {/* Specular Bubble Top Highlight Arc */}
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-gradient-to-b from-white/90 to-transparent rounded-full blur-[2px] pointer-events-none" />
+            {/* Subtle Top Shimmer Line */}
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-purple-600 via-fuchsia-500 to-purple-600 animate-shimmer opacity-80" />
+
             {authError && (
-              <div className="mb-4 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs flex items-center gap-2">
+              <div className="mb-4 p-3.5 bg-rose-50/90 backdrop-blur-sm border border-rose-200 text-rose-700 rounded-2xl text-xs flex items-center gap-2 shadow-sm">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
                 <span>{authError}</span>
               </div>
@@ -382,14 +388,14 @@ Log in to customize your AI assistant, manage company knowledge, view customer l
                   placeholder="Enter Super-Admin Master Key"
                   value={authInputKey}
                   onChange={(e) => setAuthInputKey(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-purple-600 focus:ring-2 focus:ring-purple-600/20 text-slate-900 font-mono placeholder:text-slate-400 transition"
+                  className="w-full px-3.5 py-2.5 bg-white/60 backdrop-blur-md border border-slate-200/80 rounded-xl outline-none focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 text-slate-900 font-mono placeholder:text-slate-400 placeholder:font-sans transition shadow-inner"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={isVerifying}
-                className="w-full py-3 bg-purple-900 hover:bg-purple-950 text-white rounded-xl font-bold transition shadow-md shadow-purple-900/20 flex items-center justify-center gap-2"
+                className="w-full py-3 bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-800 hover:from-purple-800 hover:to-purple-900 text-white rounded-xl font-bold transition shadow-md shadow-purple-900/20 hover:shadow-lg hover:shadow-purple-900/30 hover:-translate-y-px flex items-center justify-center gap-2 mt-2 group"
               >
                 {isVerifying ? (
                   <>
@@ -397,7 +403,7 @@ Log in to customize your AI assistant, manage company knowledge, view customer l
                   </>
                 ) : (
                   <>
-                    Unlock Control Panel <ArrowUpRight className="w-3 h-3.5" />
+                    Unlock Control Panel <ArrowUpRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition" />
                   </>
                 )}
               </button>
