@@ -8,12 +8,12 @@ import { useEffect, useRef } from "react";
  * Feels handcrafted — soft blurred circles with turbulence.
  */
 
-// [r, g, b, baseAlpha]
+// [r, g, b, baseAlpha] - Soft, light fog hues (ultra-subtle)
 const COLORS: [number, number, number, number][] = [
-  [115,  22,  91, 0.11],   // berry purple — deep brand
-  [139,  92, 246, 0.10],   // soft violet
-  [100, 116, 139, 0.09],   // slate-grey
-  [168,  85, 247, 0.08],   // fuchsia tint
+  [120,  30, 100, 0.045],  // delicate royal berry mist
+  [147,  95, 240, 0.040],  // soft lavender haze
+  [120, 135, 160, 0.035],  // airy slate-grey vapor
+  [180,  90, 240, 0.030],  // light ethereal fuchsia
 ];
 
 interface Particle {
@@ -85,25 +85,21 @@ export default function SmokeCanvas() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // Spawn new particles near mouse
-      if (mouse.current.active && timestamp - lastSpawn.current > 28) {
-        // 2–3 per frame for a lush smoke
-        const count = 2 + Math.floor(Math.random() * 2);
-        for (let i = 0; i < count; i++) {
-          if (particles.current.length < 220) {
-            particles.current.push(makeParticle(mouse.current.x, mouse.current.y));
-          }
+      if (mouse.current.active && timestamp - lastSpawn.current > 35) {
+        if (particles.current.length < 90) {
+          particles.current.push(makeParticle(mouse.current.x, mouse.current.y));
         }
         lastSpawn.current = timestamp;
       }
 
       // Occasionally emit idle ambient particles from the center if no mouse
-      if (!mouse.current.active && Math.random() < 0.04 && particles.current.length < 60) {
+      if (!mouse.current.active && Math.random() < 0.02 && particles.current.length < 25) {
         particles.current.push(makeParticle(canvas.width * 0.5, canvas.height * 0.55));
       }
 
       ctx.save();
-      // Global blur for soft smoke look
-      ctx.filter = "blur(14px)";
+      // Global soft blur for ultra-light atmospheric fog
+      ctx.filter = "blur(22px)";
 
       for (let i = particles.current.length - 1; i >= 0; i--) {
         const p = particles.current[i];
