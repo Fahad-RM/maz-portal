@@ -624,6 +624,13 @@
         height: 18px !important;
         font-size: 10px !important;
       }
+      /* On mobile: hide launcher FAB when chat is open — header X is sufficient */
+      #maz-launcher-btn.maz-hidden-mobile {
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transform: scale(0.7) !important;
+        transition: opacity 0.25s ease, transform 0.25s ease !important;
+      }
       .maz-teaser {
         bottom: 84px !important;
         ${scriptPosition === "left" ? "left: 16px !important; right: auto !important;" : "right: 16px !important; left: auto !important;"}
@@ -637,16 +644,26 @@
         transform: rotate(135deg) !important;
       }
       #maz-chat-panel {
-        bottom: 10px !important;
-        right: 8px !important;
-        left: 8px !important;
-        width: calc(100vw - 16px) !important;
-        height: calc(100vh - 20px) !important;
-        max-height: 580px !important;
-        border-radius: 22px !important;
+        bottom: 0px !important;
+        right: 0px !important;
+        left: 0px !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0px !important;
+      }
+      /* Footer input area: keep send button inline, full width */
+      .maz-footer {
+        padding: 10px 12px !important;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+        gap: 8px !important;
       }
       .maz-input {
-        font-size: 15px !important;
+        font-size: 16px !important;
+      }
+      /* Branding row compact on mobile */
+      .maz-branding {
+        padding-bottom: calc(4px + env(safe-area-inset-bottom)) !important;
       }
     }
   `;
@@ -843,11 +860,14 @@
       iconClose.style.display = "block";
       hideTeaser();
       if (badgeEl) badgeEl.style.display = "none";
+      // Hide FAB on mobile (header X is sufficient)
+      if (window.innerWidth <= 640) launcherBtn.classList.add("maz-hidden-mobile");
       setTimeout(() => inputEl.focus(), 200);
     } else {
       chatPanel.classList.remove("maz-open");
       iconOpen.style.display = "block";
       iconClose.style.display = "none";
+      launcherBtn.classList.remove("maz-hidden-mobile");
     }
   }
 

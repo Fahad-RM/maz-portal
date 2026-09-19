@@ -99,52 +99,53 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-purple-600 selection:text-white">
-        <header className="bg-white/90 backdrop-blur-xl border-b border-slate-200/80 sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <a href="/" className="flex items-center gap-3 group">
+      <body className="min-h-screen flex flex-col bg-gradient-to-br from-slate-50 via-white to-purple-50/20 text-slate-900 selection:bg-purple-600 selection:text-white">
+        {/* Floating pill header — sits above page with space on sides */}
+        <div className="sticky top-0 z-50 flex justify-center px-4 pt-3 pb-0 pointer-events-none">
+          <header className="pointer-events-auto w-full max-w-5xl bg-white/85 backdrop-blur-2xl border border-slate-200/80 rounded-2xl shadow-lg shadow-slate-900/[0.06] px-4 sm:px-6 h-14 flex items-center justify-between transition-all duration-300">
+            <a href="/" className="flex items-center gap-2.5 group">
               <img
                 src="/maz-logo.png"
                 alt="MAZ by Maifelz Technologies LLP"
-                className="h-7 sm:h-8 w-auto object-contain filter drop-shadow-sm brightness-100 group-hover:scale-105 transition duration-200"
+                className="h-7 sm:h-8 w-auto object-contain filter drop-shadow-sm group-hover:scale-105 transition duration-200"
               />
-              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200/80 tracking-wide">
                 Enterprise AI Engine
               </span>
             </a>
 
-            <nav className="flex items-center gap-2 sm:gap-3">
+            <nav className="flex items-center gap-1.5 sm:gap-2">
               <a
                 href="/pricing"
-                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-purple-700 hover:bg-slate-100 transition flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-purple-700 hover:bg-purple-50/60 transition flex items-center gap-1"
               >
                 Pricing &amp; Plans
               </a>
               <a
                 href="/admin"
-                className="hidden sm:inline-flex px-3.5 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-slate-100 border border-slate-200 transition"
+                className="hidden sm:inline-flex px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 transition"
               >
                 Super-Admin
               </a>
               <a
                 href="/dashboard"
-                className="px-4 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-800 hover:from-purple-800 hover:to-purple-900 text-white transition shadow-sm shadow-purple-900/25"
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-800 hover:from-purple-800 hover:to-purple-900 text-white transition shadow-sm shadow-purple-900/20 hover:shadow-md hover:shadow-purple-900/30 hover:-translate-y-px"
               >
                 Customer Studio
               </a>
             </nav>
-          </div>
-        </header>
+          </header>
+        </div>
 
-        <main className="flex-1">{children}</main>
+        <main className="flex-1 pt-2">{children}</main>
 
-        <footer className="border-t border-slate-200 bg-white py-8 text-center text-xs text-slate-500">
+        <footer className="border-t border-slate-200/80 bg-white/70 backdrop-blur-sm py-8 text-center text-xs text-slate-500">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <img src="/maz-logo.png" alt="Maifelz" className="h-5 w-auto object-contain opacity-80" />
-              <span className="text-slate-600 font-medium">© 2026 Maifelz Technologies LLP • Official Odoo ERP Partner</span>
+              <img src="/maz-logo.png" alt="Maifelz" className="h-5 w-auto object-contain opacity-70" />
+              <span className="text-slate-500 font-medium">© 2026 Maifelz Technologies LLP • Official Odoo ERP Partner</span>
             </div>
-            <div className="flex items-center gap-4 text-slate-600">
+            <div className="flex items-center gap-4 text-slate-500">
               <a href="/pricing" className="hover:text-purple-700 transition">Pricing</a>
               <span>•</span>
               <a href="/dashboard" className="hover:text-purple-700 transition">Customer Portal</a>
