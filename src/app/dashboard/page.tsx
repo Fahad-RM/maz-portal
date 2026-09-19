@@ -1816,7 +1816,12 @@ export default function CustomerBotStudio() {
                     </span>
                   </div>
                   <h3 className="text-base font-bold text-slate-900 mt-2">
-                    {odooReport.model_label} ({odooReport.total_found} Records Found)
+                    {odooReport.model_label} (
+                    {(odooReport.total_found ?? odooReport.records?.length ?? 0).toLocaleString()} Total Records
+                    {odooReport.records && odooReport.records.length > 0 && !odooReport.is_count_only
+                      ? `, Showing ${odooReport.records.length}`
+                      : ""}
+                    )
                   </h3>
                 </div>
 
@@ -1882,8 +1887,8 @@ export default function CustomerBotStudio() {
                 </div>
               )}
 
-              {/* Data Table */}
-              {odooReport.records && odooReport.records.length > 0 ? (
+              {/* Data Table (Only rendered when detailed records are requested, hidden for count-only queries) */}
+              {!odooReport.is_count_only && odooReport.records && odooReport.records.length > 0 ? (
                 <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-inner">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider">
@@ -1912,11 +1917,11 @@ export default function CustomerBotStudio() {
                     </tbody>
                   </table>
                 </div>
-              ) : (
+              ) : !odooReport.is_count_only ? (
                 <div className="p-8 text-center text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                   No matching records found in this Odoo model for your search.
                 </div>
-              )}
+              ) : null}
             </div>
           )}
 
