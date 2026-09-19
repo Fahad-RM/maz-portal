@@ -20,6 +20,8 @@ interface TenantProfile {
   messages_used_this_month: number;
   remaining_messages: number;
   usage_percentage: number;
+  enable_chatbot?: boolean;
+  enable_odoo?: boolean;
   is_active: boolean;
 }
 
@@ -97,6 +99,17 @@ export default function CustomerBotStudio() {
       setMetaAccessToken(localStorage.getItem("maz_meta_token") || "");
     }
   }, []);
+
+  // Synchronize default tab with tenant service entitlements
+  useEffect(() => {
+    if (tenantProfile) {
+      if (tenantProfile.enable_odoo !== false && tenantProfile.enable_chatbot === false) {
+        setActiveTab("odoo");
+      } else if (tenantProfile.enable_chatbot !== false && activeTab === "odoo" && tenantProfile.enable_odoo === false) {
+        setActiveTab("appearance");
+      }
+    }
+  }, [tenantProfile]);
 
   const formatWhatsAppMessage = (report: any) => {
     if (!report) return "";
@@ -1030,6 +1043,10 @@ export default function CustomerBotStudio() {
   const remaining = tenantProfile?.remaining_messages ?? Math.max(0, maxQuota - used);
   const usagePct = tenantProfile?.usage_percentage ?? Math.min(100, Math.round((used / maxQuota) * 100));
   const planTier = tenantProfile?.plan_tier || "pro";
+  const hasChatbot = tenantProfile?.enable_chatbot !== false;
+  const hasOdoo = tenantProfile?.enable_odoo !== false;
+  const isOdooOnly = hasOdoo && !hasChatbot;
+  const isChatbotOnly = hasChatbot && !hasOdoo;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -1037,10 +1054,23 @@ export default function CustomerBotStudio() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Customer Bot Studio</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 flex items-center gap-1 font-mono">
-              <Bot className="w-3 h-3" /> {currentBot?.bot_id}
-            </span>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              {isOdooOnly
+                ? "ERP Analytics Studio"
+                : isChatbotOnly
+                ? "Customer Bot Studio"
+                : "Enterprise AI & ERP Studio"}
+            </h1>
+            {hasChatbot && currentBot?.bot_id && (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-100 text-blue-800 flex items-center gap-1 font-mono">
+                <Bot className="w-3 h-3" /> {currentBot.bot_id}
+              </span>
+            )}
+            {isOdooOnly && (
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-100 text-purple-800 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-purple-600" /> Odoo Live Gateway
+              </span>
+            )}
             <button
               onClick={handleLogout}
               className="inline-flex items-center gap-1 text-[11px] text-slate-400 hover:text-rose-600 font-semibold transition ml-2"
@@ -1050,60 +1080,71 @@ export default function CustomerBotStudio() {
             </button>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Customize widget appearance, ingest company documents & web pages, review qualified leads, and sync to Odoo.
+            {isOdooOnly
+              ? "Direct natural language AI query gateway for your Odoo ERP database with instant Excel/PDF exports & WhatsApp dispatch."
+              : isChatbotOnly
+              ? "Customize widget appearance, ingest company documents & web pages, review qualified leads, and copy website embed code."
+              : "Comprehensive suite: AI assistant customization, enterprise knowledge ingestion, qualified leads, and live Odoo ERP analytics."}
           </p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center bg-slate-200/80 p-1 rounded-xl text-xs font-semibold self-start sm:self-auto">
-          <button
-            onClick={() => setActiveTab("appearance")}
-            className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              activeTab === "appearance" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Palette className="w-3.5 h-3.5" /> Appearance
-          </button>
-          <button
-            onClick={() => setActiveTab("knowledge")}
-            className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              activeTab === "knowledge" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <BookOpen className="w-3.5 h-3.5" /> Knowledge Base ({documents.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("leads")}
-            className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              activeTab === "leads" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Flame className="w-3.5 h-3.5 text-rose-500" /> Leads ({leads.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("conversations")}
-            className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              activeTab === "conversations" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5 text-blue-600" /> Conversations ({conversations.length})
-          </button>
-          <button
-            onClick={() => setActiveTab("embed")}
-            className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              activeTab === "embed" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            <Code className="w-3.5 h-3.5" /> Embed &amp; Widget
-          </button>
-          <button
-            onClick={() => setActiveTab("odoo")}
-            className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
-              activeTab === "odoo" ? "bg-gradient-to-r from-purple-700 to-fuchsia-700 text-white shadow-sm font-bold" : "text-purple-700 hover:bg-purple-100/60 font-semibold"
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Odoo AI Analytics
-          </button>
+        <div className="flex items-center bg-slate-200/80 p-1 rounded-xl text-xs font-semibold self-start sm:self-auto flex-wrap gap-1">
+          {hasChatbot && (
+            <>
+              <button
+                onClick={() => setActiveTab("appearance")}
+                className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                  activeTab === "appearance" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Palette className="w-3.5 h-3.5" /> Appearance
+              </button>
+              <button
+                onClick={() => setActiveTab("knowledge")}
+                className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                  activeTab === "knowledge" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <BookOpen className="w-3.5 h-3.5" /> Knowledge Base ({documents.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("leads")}
+                className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                  activeTab === "leads" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Flame className="w-3.5 h-3.5 text-rose-500" /> Leads ({leads.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("conversations")}
+                className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                  activeTab === "conversations" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <MessageSquare className="w-3.5 h-3.5 text-blue-600" /> Conversations ({conversations.length})
+              </button>
+              <button
+                onClick={() => setActiveTab("embed")}
+                className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                  activeTab === "embed" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <Code className="w-3.5 h-3.5" /> Embed &amp; Widget
+              </button>
+            </>
+          )}
+
+          {hasOdoo && (
+            <button
+              onClick={() => setActiveTab("odoo")}
+              className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+                activeTab === "odoo" ? "bg-gradient-to-r from-purple-700 to-fuchsia-700 text-white shadow-sm font-bold" : "text-purple-700 hover:bg-purple-100/60 font-semibold"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Odoo AI Analytics
+            </button>
+          )}
         </div>
       </div>
 
@@ -1226,7 +1267,7 @@ export default function CustomerBotStudio() {
       )}
 
       {/* TAB 1: APPEARANCE & LIVE PREVIEW */}
-      {activeTab === "appearance" && (
+      {activeTab === "appearance" && hasChatbot && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Controls */}
           <div className="lg:col-span-7 space-y-6">
@@ -1445,7 +1486,7 @@ export default function CustomerBotStudio() {
       )}
 
       {/* TAB 2: KNOWLEDGE BASE HUB */}
-      {activeTab === "knowledge" && (
+      {activeTab === "knowledge" && hasChatbot && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* File Ingestion Card */}
@@ -1619,7 +1660,7 @@ export default function CustomerBotStudio() {
       )}
 
       {/* TAB 3: CAPTURED LEADS & CRM PIPELINE */}
-      {activeTab === "leads" && (
+      {activeTab === "leads" && hasChatbot && (
         <div className="space-y-4 text-xs">
           <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
             <div>
@@ -1736,7 +1777,7 @@ export default function CustomerBotStudio() {
       )}
 
       {/* TAB: CONVERSATIONS HISTORY */}
-      {activeTab === "conversations" && (
+      {activeTab === "conversations" && hasChatbot && (
         <div className="space-y-6 text-xs animate-fade-up">
           <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -1875,7 +1916,7 @@ export default function CustomerBotStudio() {
       )}
 
       {/* TAB 4: EMBED & ODOO CONNECT */}
-      {activeTab === "embed" && (
+      {activeTab === "embed" && hasChatbot && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
           {/* Embed Script Card */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
@@ -1927,7 +1968,7 @@ export default function CustomerBotStudio() {
       )}
 
       {/* TAB 5: ODOO AI ANALYTICS & EXECUTIVE REPORTING */}
-      {activeTab === "odoo" && (
+      {activeTab === "odoo" && hasOdoo && (
         <div className="space-y-6 text-xs animate-fade-up">
           {/* Header & Status Bar */}
           <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-sm">
