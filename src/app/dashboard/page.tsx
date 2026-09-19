@@ -1833,11 +1833,38 @@ export default function CustomerBotStudio() {
                 </div>
               </div>
 
+              {/* Direct Specific Answer Card */}
+              {odooReport.direct_answer && (
+                <div className="p-5 bg-gradient-to-r from-purple-50/90 via-fuchsia-50/50 to-purple-50/80 rounded-2xl border border-purple-200/90 shadow-sm space-y-2">
+                  <div className="flex items-center gap-2 text-purple-900 font-extrabold text-xs">
+                    <span className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center text-xs shadow-sm">
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </span>
+                    <span>Direct Answer:</span>
+                  </div>
+                  <div className="text-slate-800 text-xs leading-relaxed font-medium pl-8 space-y-1.5">
+                    {odooReport.direct_answer.split("\n").map((line: string, lIdx: number) => {
+                      if (!line.trim()) return <div key={lIdx} className="h-1" />;
+                      return (
+                        <p
+                          key={lIdx}
+                          dangerouslySetInnerHTML={{
+                            __html: line
+                              .replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-950 font-bold">$1</strong>')
+                              .replace(/`([^`]+)`/g, '<code class="bg-purple-100/80 text-purple-800 px-1.5 py-0.5 rounded text-[11px] font-mono font-semibold">$1</code>')
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* AI Key Insights Box */}
-              {odooReport.insights && odooReport.insights.length > 0 && (
+              {odooReport.insights && odooReport.insights.length > 0 && !odooReport.direct_answer && (
                 <div className="p-4 bg-purple-50/60 rounded-2xl border border-purple-100 space-y-2">
                   <div className="font-bold text-purple-900 text-xs flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Executive AI Summary:
+                    <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Executive Summary:
                   </div>
                   <div className="space-y-1.5">
                     {odooReport.insights.map((ins: string, idx: number) => (
