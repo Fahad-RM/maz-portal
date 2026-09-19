@@ -1807,10 +1807,20 @@ export default function CustomerBotStudio() {
               {/* Report Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
                       Model: {odooReport.model}
                     </span>
+                    {odooReport.period && odooReport.period !== "All time" && (
+                      <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 capitalize">
+                        Period: {odooReport.period}
+                      </span>
+                    )}
+                    {odooReport.total_amount && (
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                        Total Sum: {odooReport.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    )}
                     <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
                       <Check className="w-3 h-3" /> Live XML-RPC
                     </span>
