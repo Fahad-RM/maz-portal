@@ -96,20 +96,23 @@ export default function CenteredLoginPage() {
           </div>
         </div>
 
-        {/* Light Glassmorphism Card */}
-        <div className="w-full bg-white/95 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-2xl shadow-purple-950/[0.05] relative overflow-hidden">
+        {/* Ultra-Glossy 3D Glass Bubble Card */}
+        <div className="w-full bg-white/75 backdrop-blur-3xl rounded-[32px] p-6 sm:p-8 border border-white/80 shadow-[0_20px_50px_rgba(115,22,91,0.12),0_1px_2px_rgba(0,0,0,0.05),inset_0_1px_1px_rgba(255,255,255,0.9),inset_0_-1px_1px_rgba(115,22,91,0.05)] relative overflow-hidden transition-all duration-300">
+          
+          {/* Specular Bubble Top Highlight Arc */}
+          <div className="absolute -top-12 left-1/2 -translate-x-1/2 w-3/4 h-24 bg-gradient-to-b from-white/90 to-transparent rounded-full blur-[2px] pointer-events-none" />
           
           {/* Subtle Top Shimmer Line */}
-          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-purple-600 via-fuchsia-500 to-purple-600 animate-shimmer" />
+          <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-purple-600 via-fuchsia-500 to-purple-600 animate-shimmer opacity-80" />
 
           {/* Role Switcher Pill */}
-          <div className="grid grid-cols-2 p-1 bg-slate-100/90 rounded-2xl border border-slate-200/70 mb-5 text-xs font-bold">
+          <div className="grid grid-cols-2 p-1.5 bg-slate-100/70 backdrop-blur-md rounded-2xl border border-slate-200/60 mb-5 text-xs font-bold shadow-inner">
             <button
               type="button"
               onClick={() => { setActiveRole("customer"); setAuthError(null); setAuthSuccess(null); }}
               className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                 activeRole === "customer"
-                  ? "bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-800 text-white shadow-md shadow-purple-900/20"
+                  ? "bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-800 text-white shadow-[0_4px_14px_rgba(115,22,91,0.35)]"
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
@@ -120,7 +123,7 @@ export default function CenteredLoginPage() {
               onClick={() => { setActiveRole("admin"); setAuthError(null); setAuthSuccess(null); }}
               className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-1.5 ${
                 activeRole === "admin"
-                  ? "bg-slate-900 text-white shadow-md"
+                  ? "bg-slate-900 text-white shadow-[0_4px_14px_rgba(15,23,42,0.3)]"
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
@@ -130,13 +133,13 @@ export default function CenteredLoginPage() {
 
           {/* Feedback Banners */}
           {authError && (
-            <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-xs flex items-start gap-2">
+            <div className="mb-4 p-3 bg-rose-50/90 backdrop-blur-sm border border-rose-200 text-rose-700 rounded-2xl text-xs flex items-start gap-2 shadow-sm">
               <AlertCircle className="w-4 h-4 shrink-0 text-rose-500 mt-0.5" />
               <span>{authError}</span>
             </div>
           )}
           {authSuccess && (
-            <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-xs flex items-start gap-2">
+            <div className="mb-4 p-3 bg-emerald-50/90 backdrop-blur-sm border border-emerald-200 text-emerald-700 rounded-2xl text-xs flex items-start gap-2 shadow-sm">
               <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
               <span>{authSuccess}</span>
             </div>
@@ -159,7 +162,7 @@ export default function CenteredLoginPage() {
                   placeholder="client@company.com"
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50/90 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/15 text-slate-900 placeholder:text-slate-400 transition font-medium"
+                  className="w-full px-3.5 py-2.5 bg-white/60 backdrop-blur-md border border-slate-200/80 rounded-xl outline-none focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 text-slate-900 placeholder:text-slate-400 transition font-medium shadow-inner"
                 />
               </div>
 
@@ -174,7 +177,7 @@ export default function CenteredLoginPage() {
                     placeholder="Enter your password"
                     value={customerPassword}
                     onChange={(e) => setCustomerPassword(e.target.value)}
-                    className="w-full px-3.5 py-2.5 pr-10 bg-slate-50/90 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/15 text-slate-900 font-mono placeholder:text-slate-400 placeholder:font-sans transition"
+                    className="w-full px-3.5 py-2.5 pr-10 bg-white/60 backdrop-blur-md border border-slate-200/80 rounded-xl outline-none focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 text-slate-900 font-mono placeholder:text-slate-400 placeholder:font-sans transition shadow-inner"
                   />
                   <button
                     type="button"
@@ -221,7 +224,7 @@ export default function CenteredLoginPage() {
                   placeholder="Enter Master Super-Admin Passkey"
                   value={adminKey}
                   onChange={(e) => setAdminKey(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50/90 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-purple-500 focus:ring-2 focus:ring-purple-500/15 text-slate-900 font-mono placeholder:text-slate-400 placeholder:font-sans transition"
+                  className="w-full px-3.5 py-2.5 bg-white/60 backdrop-blur-md border border-slate-200/80 rounded-xl outline-none focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 text-slate-900 font-mono placeholder:text-slate-400 placeholder:font-sans transition shadow-inner"
                 />
               </div>
 
