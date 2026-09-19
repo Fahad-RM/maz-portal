@@ -66,10 +66,12 @@ export default function CustomerBotStudio() {
   const [activeTab, setActiveTab] = useState<"appearance" | "knowledge" | "leads" | "embed" | "odoo">("appearance");
 
   // Odoo AI Analytics State
-  const [odooUrl, setOdooUrl] = useState("https://maifelz-maifelz.odoo.com");
-  const [odooDb, setOdooDb] = useState("maifelz-maifelz-maifelz-37525993");
-  const [odooUsername, setOdooUsername] = useState("fahad@maifelz.com");
-  const [odooApiKey, setOdooApiKey] = useState("04474c6cbf27ffae05a5e4c85d7bbe4ad00df9cb");
+  const isMaifelzOwner = tenantProfile?.company_name?.toLowerCase().includes("maifelz") || false;
+  const [odooUrl, setOdooUrl] = useState("");
+  const [odooDb, setOdooDb] = useState("");
+  const [odooUsername, setOdooUsername] = useState("");
+  const [odooApiKey, setOdooApiKey] = useState("");
+  const [showOdooConfigModal, setShowOdooConfigModal] = useState(false);
   const [isConnectingOdoo, setIsConnectingOdoo] = useState(false);
   const [odooConnected, setOdooConnected] = useState(false);
   const [odooMetrics, setOdooMetrics] = useState<any>(null);
@@ -161,6 +163,26 @@ export default function CustomerBotStudio() {
           const pData = await pRes.json();
           setTenantProfile(pData.tenant);
           localStorage.setItem("maz_tenant_info", JSON.stringify(pData.tenant));
+          
+          // Auto-configure credentials for Maifelz, otherwise load client's saved credentials
+          if (pData.tenant?.company_name?.toLowerCase().includes("maifelz")) {
+            setOdooUrl("https://maifelz-maifelz.odoo.com");
+            setOdooDb("maifelz-maifelz-maifelz-37525993");
+            setOdooUsername("fahad@maifelz.com");
+            setOdooApiKey("04474c6cbf27ffae05a5e4c85d7bbe4ad00df9cb");
+          } else {
+            // Check if tenant has their own Odoo credentials saved in localStorage
+            const savedOdoo = localStorage.getItem(`maz_odoo_creds_${pData.tenant?.id}`);
+            if (savedOdoo) {
+              try {
+                const parsed = JSON.parse(savedOdoo);
+                setOdooUrl(parsed.url || "");
+                setOdooDb(parsed.db || "");
+                setOdooUsername(parsed.username || "");
+                setOdooApiKey(parsed.api_key || "");
+              } catch (e) {}
+            }
+          }
         }
       } catch (err) {
         console.error("Could not fetch profile:", err);
@@ -1396,44 +1418,60 @@ export default function CustomerBotStudio() {
                 </p>
               </div>
 
-              {/* Status Badge */}
+              {/* Status Badge & Actions */}
               <div className="flex items-center gap-2">
                 {odooConnected ? (
                   <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold flex items-center gap-1.5 shadow-sm">
-                    <Check className="w-4 h-4 text-emerald-600" /> Odoo Live Connected
+                    <Check className="w-4 h-4 text-emerald-600" /> {tenantProfile?.company_name || "Odoo"} Connected
                   </span>
                 ) : (
-                  <button
-                    onClick={async () => {
-                      setIsConnectingOdoo(true);
-                      setOdooError(null);
-                      try {
-                        const res = await fetch("https://maz-backend-t1hy.onrender.com/api/v1/odoo-analytics/test-connection", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            odoo_url: odooUrl,
-                            odoo_db: odooDb,
-                            odoo_username: odooUsername,
-                            odoo_api_key: odooApiKey
-                          })
-                        });
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.detail || "Connection failed");
-                        setOdooConnected(true);
-                        setOdooMetrics(data.metrics);
-                      } catch (err: any) {
-                        setOdooError(err.message || "Failed to connect to Odoo");
-                      } finally {
-                        setIsConnectingOdoo(false);
-                      }
-                    }}
-                    disabled={isConnectingOdoo}
-                    className="px-4 py-2 bg-gradient-to-r from-purple-700 to-fuchsia-700 text-white rounded-xl font-bold hover:from-purple-800 hover:to-purple-900 transition flex items-center gap-2 shadow-md shadow-purple-900/20"
-                  >
-                    {isConnectingOdoo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
-                    {isConnectingOdoo ? "Authenticating Odoo..." : "Connect Maifelz Odoo"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        if (!odooUrl || !odooDb || !odooUsername || !odooApiKey) {
+                          setShowOdooConfigModal(true);
+                          return;
+                        }
+                        setIsConnectingOdoo(true);
+                        setOdooError(null);
+                        try {
+                          const res = await fetch("https://maz-backend-t1hy.onrender.com/api/v1/odoo-analytics/test-connection", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              odoo_url: odooUrl,
+                              odoo_db: odooDb,
+                              odoo_username: odooUsername,
+                              odoo_api_key: odooApiKey
+                            })
+                          });
+                          const data = await res.json();
+                          if (!res.ok) throw new Error(data.detail || "Connection failed");
+                          setOdooConnected(true);
+                          setOdooMetrics(data.metrics);
+                        } catch (err: any) {
+                          setOdooError(err.message || "Failed to connect to Odoo");
+                        } finally {
+                          setIsConnectingOdoo(false);
+                        }
+                      }}
+                      disabled={isConnectingOdoo}
+                      className="px-4 py-2 bg-gradient-to-r from-purple-700 to-fuchsia-700 text-white rounded-xl font-bold hover:from-purple-800 hover:to-purple-900 transition flex items-center gap-2 shadow-md shadow-purple-900/20"
+                    >
+                      {isConnectingOdoo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                      {isConnectingOdoo 
+                        ? "Authenticating..." 
+                        : (odooUrl ? `Connect ${tenantProfile?.company_name || "Odoo"}` : `Configure ${tenantProfile?.company_name || "Odoo"} Gateway`)}
+                    </button>
+
+                    <button
+                      onClick={() => setShowOdooConfigModal(true)}
+                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-semibold border border-slate-200 transition"
+                      title="Edit Odoo Connection Settings"
+                    >
+                      ⚙️
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -1621,6 +1659,117 @@ export default function CustomerBotStudio() {
 
         </div>
       )}
+
+      {/* ODOO CREDENTIALS CONFIGURATION MODAL */}
+      {showOdooConfigModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-200 text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Configure Odoo Gateway: {tenantProfile?.company_name || "Client ERP"}
+                </h3>
+                <span className="text-slate-500 text-[11px]">Connect your company's Odoo ERP instance via XML-RPC.</span>
+              </div>
+              <button
+                onClick={() => setShowOdooConfigModal(false)}
+                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (tenantProfile?.id) {
+                  localStorage.setItem(
+                    `maz_odoo_creds_${tenantProfile.id}`,
+                    JSON.stringify({
+                      url: odooUrl.trim(),
+                      db: odooDb.trim(),
+                      username: odooUsername.trim(),
+                      api_key: odooApiKey.trim(),
+                    })
+                  );
+                }
+                setShowOdooConfigModal(false);
+                setOdooConnected(false);
+                setOdooMetrics(null);
+              }}
+              className="space-y-3.5 my-4"
+            >
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Odoo Server URL</label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://yourcompany.odoo.com"
+                  value={odooUrl}
+                  onChange={(e) => setOdooUrl(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-purple-600 font-mono text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Database Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. yourcompany_db"
+                  value={odooDb}
+                  onChange={(e) => setOdooDb(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-purple-600 font-mono text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Odoo User Email</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="admin@yourcompany.com"
+                  value={odooUsername}
+                  onChange={(e) => setOdooUsername(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-purple-600 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Odoo API Key</label>
+                <input
+                  type="password"
+                  required
+                  placeholder="Enter Odoo generated API Key"
+                  value={odooApiKey}
+                  onChange={(e) => setOdooApiKey(e.target.value)}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-purple-600 font-mono text-xs"
+                />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  Generate in Odoo: User Profile ➔ Account Security ➔ New API Key.
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowOdooConfigModal(false)}
+                  className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-purple-700 hover:bg-purple-800 text-white font-bold rounded-xl shadow-md transition"
+                >
+                  Save Configuration
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
