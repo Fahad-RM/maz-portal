@@ -63,7 +63,20 @@ export default function CustomerBotStudio() {
 
   // Active Bot
   const [currentBot, setCurrentBot] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"appearance" | "knowledge" | "leads" | "embed">("appearance");
+  const [activeTab, setActiveTab] = useState<"appearance" | "knowledge" | "leads" | "embed" | "odoo">("appearance");
+
+  // Odoo AI Analytics State
+  const [odooUrl, setOdooUrl] = useState("https://maifelz-maifelz.odoo.com");
+  const [odooDb, setOdooDb] = useState("maifelz-maifelz-maifelz-37525993");
+  const [odooUsername, setOdooUsername] = useState("fahad@maifelz.com");
+  const [odooApiKey, setOdooApiKey] = useState("04474c6cbf27ffae05a5e4c85d7bbe4ad00df9cb");
+  const [isConnectingOdoo, setIsConnectingOdoo] = useState(false);
+  const [odooConnected, setOdooConnected] = useState(false);
+  const [odooMetrics, setOdooMetrics] = useState<any>(null);
+  const [odooQuestion, setOdooQuestion] = useState("");
+  const [isQueryingOdoo, setIsQueryingOdoo] = useState(false);
+  const [odooReport, setOdooReport] = useState<any>(null);
+  const [odooError, setOdooError] = useState<string | null>(null);
 
   // Bot Config Form State
   const [botTitle, setBotTitle] = useState("");
@@ -674,7 +687,15 @@ export default function CustomerBotStudio() {
               activeTab === "embed" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            <Code className="w-3.5 h-3.5" /> Embed & Odoo
+            <Code className="w-3.5 h-3.5" /> Embed &amp; Widget
+          </button>
+          <button
+            onClick={() => setActiveTab("odoo")}
+            className={`px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 ${
+              activeTab === "odoo" ? "bg-gradient-to-r from-purple-700 to-fuchsia-700 text-white shadow-sm font-bold" : "text-purple-700 hover:bg-purple-100/60 font-semibold"
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" /> Odoo AI Analytics
           </button>
         </div>
       </div>
@@ -1356,6 +1377,248 @@ export default function CustomerBotStudio() {
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB 5: ODOO AI ANALYTICS & EXECUTIVE REPORTING */}
+      {activeTab === "odoo" && (
+        <div className="space-y-6 text-xs animate-fade-up">
+          {/* Header & Connection Card */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-slate-100">
+              <div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-50 text-purple-700 font-bold text-[11px] mb-2 border border-purple-200">
+                  <Sparkles className="w-3.5 h-3.5" /> Official Odoo Partner Native BI Gateway
+                </div>
+                <h2 className="text-lg font-black text-slate-900">Odoo Enterprise AI Analytics &amp; Reporting</h2>
+                <p className="text-slate-500 text-xs mt-0.5">
+                  Ask natural language questions directly to your Odoo ERP database to generate instant reports, tables, and pipeline metrics.
+                </p>
+              </div>
+
+              {/* Status Badge */}
+              <div className="flex items-center gap-2">
+                {odooConnected ? (
+                  <span className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold flex items-center gap-1.5 shadow-sm">
+                    <Check className="w-4 h-4 text-emerald-600" /> Odoo Live Connected
+                  </span>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      setIsConnectingOdoo(true);
+                      setOdooError(null);
+                      try {
+                        const res = await fetch("https://maz-backend-t1hy.onrender.com/api/v1/odoo-analytics/test-connection", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            odoo_url: odooUrl,
+                            odoo_db: odooDb,
+                            odoo_username: odooUsername,
+                            odoo_api_key: odooApiKey
+                          })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.detail || "Connection failed");
+                        setOdooConnected(true);
+                        setOdooMetrics(data.metrics);
+                      } catch (err: any) {
+                        setOdooError(err.message || "Failed to connect to Odoo");
+                      } finally {
+                        setIsConnectingOdoo(false);
+                      }
+                    }}
+                    disabled={isConnectingOdoo}
+                    className="px-4 py-2 bg-gradient-to-r from-purple-700 to-fuchsia-700 text-white rounded-xl font-bold hover:from-purple-800 hover:to-purple-900 transition flex items-center gap-2 shadow-md shadow-purple-900/20"
+                  >
+                    {isConnectingOdoo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+                    {isConnectingOdoo ? "Authenticating Odoo..." : "Connect Maifelz Odoo"}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {odooError && (
+              <div className="mt-4 p-3.5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{odooError}</span>
+              </div>
+            )}
+
+            {/* Real-Time Live Metrics Badges */}
+            {odooMetrics && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6 pt-5 border-t border-slate-100">
+                <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-100 text-center">
+                  <span className="text-[11px] font-semibold text-purple-700">CRM Leads</span>
+                  <div className="text-2xl font-black text-slate-900 mt-1">{odooMetrics.leads_count}</div>
+                  <span className="text-[10px] text-slate-400">Live in Pipeline</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-emerald-50/60 border border-emerald-100 text-center">
+                  <span className="text-[11px] font-semibold text-emerald-700">Contacts &amp; Partners</span>
+                  <div className="text-2xl font-black text-slate-900 mt-1">{odooMetrics.partners_count}</div>
+                  <span className="text-[10px] text-slate-400">In Directory</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-100 text-center">
+                  <span className="text-[11px] font-semibold text-blue-700">Sales Orders</span>
+                  <div className="text-2xl font-black text-slate-900 mt-1">{odooMetrics.sales_count}</div>
+                  <span className="text-[10px] text-slate-400">sale.order</span>
+                </div>
+                <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-100 text-center">
+                  <span className="text-[11px] font-semibold text-amber-700">Invoices &amp; Bills</span>
+                  <div className="text-2xl font-black text-slate-900 mt-1">{odooMetrics.invoices_count}</div>
+                  <span className="text-[10px] text-slate-400">account.move</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Ask AI Questions Bar */}
+          <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <Bot className="w-4 h-4 text-purple-700" /> Ask Plain English Questions to Your Odoo Database
+            </h3>
+            <p className="text-slate-500 text-xs">
+              Type what you want to see. The AI will translate your question into an Odoo ORM query, run it, and build an executive table.
+            </p>
+
+            {/* Quick Prompt Chips */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              {[
+                "Who applied for jobs or internships recently?",
+                "List all contacts in our Odoo database",
+                "Show recent CRM leads with email and phone",
+                "Show all sales orders and quotations"
+              ].map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => setOdooQuestion(chip)}
+                  className="px-3 py-1 rounded-full bg-slate-100 hover:bg-purple-100/80 text-slate-700 hover:text-purple-900 text-[11px] font-medium transition"
+                >
+                  💡 {chip}
+                </button>
+              ))}
+            </div>
+
+            {/* Question Input Form */}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!odooQuestion.trim()) return;
+                setIsQueryingOdoo(true);
+                setOdooError(null);
+                setOdooReport(null);
+
+                try {
+                  const res = await fetch("https://maz-backend-t1hy.onrender.com/api/v1/odoo-analytics/ask", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      odoo_url: odooUrl,
+                      odoo_db: odooDb,
+                      odoo_username: odooUsername,
+                      odoo_api_key: odooApiKey,
+                      question: odooQuestion.trim()
+                    })
+                  });
+                  const data = await res.json();
+                  if (!res.ok) throw new Error(data.detail || "Query failed");
+                  setOdooReport(data.report);
+                  setOdooConnected(true);
+                } catch (err: any) {
+                  setOdooError(err.message || "Could not query Odoo");
+                } finally {
+                  setIsQueryingOdoo(false);
+                }
+              }}
+              className="flex gap-2 pt-2"
+            >
+              <input
+                type="text"
+                required
+                placeholder="Ask about leads, job applications, sales orders, contacts, or invoices..."
+                value={odooQuestion}
+                onChange={(e) => setOdooQuestion(e.target.value)}
+                className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-purple-600 focus:ring-2 focus:ring-purple-600/15 text-slate-900 placeholder:text-slate-400 text-xs font-medium transition"
+              />
+              <button
+                type="submit"
+                disabled={isQueryingOdoo}
+                className="px-6 py-3 bg-gradient-to-r from-purple-700 to-fuchsia-700 hover:from-purple-800 hover:to-purple-900 text-white rounded-xl font-bold transition flex items-center gap-2 shadow-md shadow-purple-900/20 disabled:opacity-60 shrink-0"
+              >
+                {isQueryingOdoo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                {isQueryingOdoo ? "Analyzing..." : "Generate Report"}
+              </button>
+            </form>
+          </div>
+
+          {/* Generated Report Result */}
+          {odooReport && (
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-lg overflow-hidden space-y-4 p-6 animate-fade-up">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-100">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
+                    Model: {odooReport.model}
+                  </span>
+                  <h3 className="text-base font-bold text-slate-900 mt-1.5">
+                    {odooReport.model_label} Report ({odooReport.total_found} Records)
+                  </h3>
+                </div>
+                <div className="text-[11px] text-slate-500 font-medium">
+                  Query executed live via Odoo XML-RPC
+                </div>
+              </div>
+
+              {/* AI Key Insights Box */}
+              {odooReport.insights && odooReport.insights.length > 0 && (
+                <div className="p-4 bg-purple-50/50 rounded-2xl border border-purple-100 space-y-1.5">
+                  <span className="font-bold text-purple-900 text-xs flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Executive AI Summary:
+                  </span>
+                  {odooReport.insights.map((ins: string, idx: number) => (
+                    <div key={idx} className="text-slate-700 text-xs flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-600 shrink-0" />
+                      <span dangerouslySetInnerHTML={{ __html: ins.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Data Table */}
+              {odooReport.records && odooReport.records.length > 0 ? (
+                <div className="overflow-x-auto rounded-2xl border border-slate-200">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px]">
+                      <tr>
+                        {Object.keys(odooReport.records[0]).map((col) => (
+                          <th key={col} className="py-3 px-4 capitalize">
+                            {col.replace('_', ' ')}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {odooReport.records.map((row: any, rIdx: number) => (
+                        <tr key={rIdx} className="hover:bg-slate-50/70 transition">
+                          {Object.values(row).map((val: any, cIdx: number) => (
+                            <td key={cIdx} className="py-2.5 px-4 font-medium text-slate-800">
+                              {String(val)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-8 text-center text-slate-400">
+                  No matching records found in this Odoo model for your search.
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
       )}
     </div>
