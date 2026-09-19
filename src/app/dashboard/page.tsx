@@ -579,7 +579,7 @@ export default function CustomerBotStudio() {
 
   const copyEmbedCode = () => {
     if (!currentBot) return;
-    const code = `<script \n  src="https://maz-portal.vercel.app/maz.js" \n  data-bot-id="${currentBot.bot_id}" \n  defer>\n</script>`;
+    const code = `<script \n  src="https://ai.maifelz.com/maz.js" \n  data-bot-id="${currentBot.bot_id}" \n  defer>\n</script>`;
     navigator.clipboard.writeText(code);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
@@ -1597,7 +1597,7 @@ export default function CustomerBotStudio() {
 
             <div className="relative bg-slate-900 text-blue-200 font-mono p-4 rounded-xl text-[11px] overflow-x-auto">
               <code>
-                {`<script \n  src="https://maz-portal.vercel.app/maz.js" \n  data-bot-id="${currentBot?.bot_id}" \n  defer>\n</script>`}
+                {`<script \n  src="https://ai.maifelz.com/maz.js" \n  data-bot-id="${currentBot?.bot_id}" \n  defer>\n</script>`}
               </code>
               <button
                 onClick={copyEmbedCode}

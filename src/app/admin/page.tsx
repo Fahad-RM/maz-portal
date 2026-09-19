@@ -240,7 +240,7 @@ export default function AdminControlPanel() {
         plan_tier: data.plan_tier,
         max_messages_per_month: data.max_messages_per_month,
         api_key: data.api_key,
-        login_url: data.login_url || "https://maz-portal.vercel.app/dashboard"
+        login_url: data.login_url || "https://ai.maifelz.com/dashboard"
       });
 
       fetchData();

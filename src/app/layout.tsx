@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://maz-portal.vercel.app"),
+  metadataBase: new URL("https://ai.maifelz.com"),
   title: {
     default: "MAZ Platform — Autonomous AI Business Agents & Control Panel | Maifelz Technologies",
     template: "%s | Maifelz Technologies"
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "MAZ Platform — Autonomous AI Business Agents | Maifelz Technologies",
     description: "Enterprise AI business agent platform with multi-tenant customer seats, Odoo ERP & Xero integration, and real-time streaming RAG.",
-    url: "https://maz-portal.vercel.app",
+    url: "https://ai.maifelz.com",
     siteName: "Maifelz Technologies MAZ",
     locale: "en_US",
     type: "website",
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     description: "Enterprise multi-tenant AI business platform with Odoo CRM integration and hybrid RAG knowledge grounding.",
   },
   alternates: {
-    canonical: "https://maz-portal.vercel.app",
+    canonical: "https://ai.maifelz.com",
   },
 };
 
