@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import * as XLSX from "xlsx";
 import { 
   Bot, Palette, BookOpen, Flame, Code, UploadCloud, 
   Globe, Plus, Check, Copy, Sparkles, Send, Save, 
   Trash2, LogOut, Key, ArrowUpRight, Loader2, FileText,
   User, Lock, Eye, EyeOff, Shield, Zap, AlertCircle, BarChart3, RefreshCw, MessageSquare,
-  Search, Settings, Database
+  Search, Settings, Database, FileSpreadsheet, Download, Share2, Phone, ExternalLink, X
 } from "lucide-react";
 
 interface TenantProfile {
@@ -81,9 +82,299 @@ export default function CustomerBotStudio() {
   const [odooReport, setOdooReport] = useState<any>(null);
   const [odooError, setOdooError] = useState<string | null>(null);
 
+  // WhatsApp Dispatch & Export States
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+  const [whatsAppPhone, setWhatsAppPhone] = useState("");
+  const [metaPhoneNumberId, setMetaPhoneNumberId] = useState("");
+  const [metaAccessToken, setMetaAccessToken] = useState("");
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [whatsAppStatusMsg, setWhatsAppStatusMsg] = useState<string | null>(null);
+  const [showMetaSettings, setShowMetaSettings] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setMetaPhoneNumberId(localStorage.getItem("maz_meta_phone_id") || "");
+      setMetaAccessToken(localStorage.getItem("maz_meta_token") || "");
+    }
+  }, []);
+
+  const formatWhatsAppMessage = (report: any) => {
+    if (!report) return "";
+    const title = `*📊 ${report.model_label || "MAZ AI Analytics Report"}*`;
+    const period = report.period && report.period !== "All time" ? `\n*Period:* ${report.period}` : "";
+    const total = report.total_found !== undefined ? `\n*Total Records:* ${Number(report.total_found).toLocaleString()}` : "";
+    const sum = report.total_amount ? `\n*Total Value:* ${Number(report.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : "";
+    
+    let cleanAnswer = (report.direct_answer || "")
+      .replace(/^#+\s+/gm, "")
+      .replace(/\n\s*[\*\-]\s+/g, "\n• ");
+      
+    return `${title}${period}${total}${sum}\n\n*Executive Summary:*\n${cleanAnswer}\n\n_Generated via MAZ AI (ai.maifelz.com)_`;
+  };
+
+  const handleSendMetaWhatsApp = async () => {
+    if (!whatsAppPhone.trim() || !odooReport) return;
+    const cleanPhone = whatsAppPhone.replace(/[^0-9]/g, "");
+    if (!cleanPhone) {
+      alert("Please enter a valid phone number with country code.");
+      return;
+    }
+    setIsSendingWhatsApp(true);
+    setWhatsAppStatusMsg(null);
+    const msg = formatWhatsAppMessage(odooReport);
+    try {
+      const res = await fetch("https://maz-backend-t1hy.onrender.com/api/v1/odoo-analytics/send-whatsapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone_number: cleanPhone,
+          message: msg,
+          meta_phone_number_id: metaPhoneNumberId || undefined,
+          meta_access_token: metaAccessToken || undefined
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWhatsAppStatusMsg(`Sent successfully to +${cleanPhone} via Meta Cloud API!`);
+      } else if (data.fallback_url) {
+        setWhatsAppStatusMsg("Meta Cloud API not configured on server. Opening in WhatsApp Web...");
+        window.open(data.fallback_url, "_blank");
+      } else {
+        throw new Error(data.detail || data.error || "Failed to send WhatsApp message");
+      }
+    } catch (err: any) {
+      console.error("WhatsApp send error:", err);
+      const fallbackUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+      window.open(fallbackUrl, "_blank");
+      setWhatsAppStatusMsg("Opened report in WhatsApp!");
+    } finally {
+      setIsSendingWhatsApp(false);
+    }
+  };
+
+  const handleOpenWhatsAppWeb = () => {
+    if (!whatsAppPhone.trim() || !odooReport) return;
+    const cleanPhone = whatsAppPhone.replace(/[^0-9]/g, "");
+    const msg = formatWhatsAppMessage(odooReport);
+    const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(msg)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleExportExcel = () => {
+    if (!odooReport) return;
+    try {
+      const wb = XLSX.utils.book_new();
+      if (odooReport.records && odooReport.records.length > 0) {
+        const wsData = XLSX.utils.json_to_sheet(odooReport.records);
+        XLSX.utils.book_append_sheet(wb, wsData, "Live Report");
+      }
+      const summaryRows = [
+        ["Report Title", odooReport.model_label || "Odoo Report"],
+        ["Target Model", odooReport.model || ""],
+        ["Period", odooReport.period || "All time"],
+        ["Total Database Records", odooReport.total_found ?? 0],
+        ["Total Amount", odooReport.total_amount ? Number(odooReport.total_amount).toFixed(2) : "N/A"],
+        ["Generated At", new Date().toLocaleString()],
+        ["", ""],
+        ["Executive Analysis", odooReport.direct_answer ? odooReport.direct_answer.replace(/^#+\s*/gm, "") : ""]
+      ];
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+      XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+      const filename = `${(odooReport.model_label || "odoo_report").toLowerCase().replace(/[^a-z0-9]/g, "_")}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    } catch (err) {
+      console.error("Failed to export Excel:", err);
+      alert("Could not export Excel file.");
+    }
+  };
+
+  const handleExportPDF = () => {
+    if (!odooReport) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    const tableHeaders = odooReport.records && odooReport.records.length > 0 ? Object.keys(odooReport.records[0]) : [];
+    const tableRowsHtml = odooReport.records && odooReport.records.length > 0
+      ? odooReport.records.map((row: any) => `
+        <tr>
+          ${Object.values(row).map((val: any) => `<td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #1e293b;">${val ?? '—'}</td>`).join('')}
+        </tr>
+      `).join('')
+      : '';
+
+    const cleanAnswerHtml = (odooReport.direct_answer || '')
+      .split('\n')
+      .map((l: string) => {
+        const tr = l.trim();
+        if (!tr) return '<br/>';
+        if (tr.startsWith('#')) return `<h3 style="margin: 12px 0 6px 0; font-size: 13px; color: #0f172a; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px;">${tr.replace(/^#+\s*/, '')}</h3>`;
+        if (tr.startsWith('* ') || tr.startsWith('- ')) return `<li style="margin: 4px 0; font-size: 11px; color: #334155;">${tr.replace(/^[\*\-]\s*/, '')}</li>`;
+        return `<p style="margin: 4px 0; font-size: 11px; color: #334155; line-height: 1.6;">${tr}</p>`;
+      })
+      .join('');
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${odooReport.model_label || 'Executive Report'} - MAZ AI</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 30px; color: #0f172a; margin: 0; }
+          .header { border-bottom: 2px solid #9333ea; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+          .title { font-size: 18px; font-weight: 800; color: #0f172a; margin: 0; }
+          .brand { font-size: 13px; font-weight: 700; color: #9333ea; margin: 0; }
+          .badges { display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap; }
+          .badge { padding: 4px 10px; border-radius: 9999px; font-size: 10px; font-weight: 700; background: #f8fafc; border: 1px solid #e2e8f0; }
+          .summary-card { background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px; padding: 18px; margin-bottom: 25px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; text-align: left; }
+          th { background: #f8fafc; padding: 8px 12px; border-bottom: 2px solid #cbd5e1; font-size: 10px; text-transform: uppercase; color: #475569; letter-spacing: 0.5px; }
+          @media print { body { padding: 0; } @page { margin: 1.5cm; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div>
+            <h1 class="title">${odooReport.model_label || 'Executive Analytics Report'}</h1>
+            <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0;">Generated on ${new Date().toLocaleString()} • Odoo Live XML-RPC</p>
+          </div>
+          <div style="text-align: right;">
+            <p class="brand">MAZ AI</p>
+            <p style="font-size: 10px; color: #94a3b8; margin: 0;">ai.maifelz.com</p>
+          </div>
+        </div>
+
+        <div class="badges">
+          <span class="badge">Model: ${odooReport.model || 'N/A'}</span>
+          ${odooReport.period ? `<span class="badge" style="background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;">Period: ${odooReport.period}</span>` : ''}
+          <span class="badge" style="background: #ecfdf5; color: #047857; border-color: #a7f3d0;">Total: ${(odooReport.total_found || 0).toLocaleString()} Records</span>
+          ${odooReport.total_amount ? `<span class="badge" style="background: #fffbeb; color: #b45309; border-color: #fde68a;">Total Value: ${Number(odooReport.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>` : ''}
+        </div>
+
+        ${cleanAnswerHtml ? `
+          <div class="summary-card">
+            <div style="font-size: 11px; font-weight: 800; color: #581c87; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">Executive Summary</div>
+            <div>${cleanAnswerHtml}</div>
+          </div>
+        ` : ''}
+
+        ${tableHeaders.length > 0 ? `
+          <div style="font-size: 12px; font-weight: 700; color: #0f172a; margin-top: 20px;">Detailed Data Ledger</div>
+          <table>
+            <thead>
+              <tr>${tableHeaders.map((h: string) => `<th>${h}</th>`).join('')}</tr>
+            </thead>
+            <tbody>${tableRowsHtml}</tbody>
+          </table>
+        ` : ''}
+
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const formatInline = (str: string) => {
+    return str
+      .replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-950 font-bold">$1</strong>')
+      .replace(/`([^`]+)`/g, '<code class="bg-purple-100/80 text-purple-800 px-1.5 py-0.5 rounded text-[11px] font-mono font-semibold">$1</code>');
+  };
+
+  const renderDirectAnswer = (content: string) => {
+    if (!content) return null;
+    const lines = content.split("\n");
+    const elements: React.ReactNode[] = [];
+
+    lines.forEach((line, idx) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        elements.push(<div key={idx} className="h-1.5" />);
+        return;
+      }
+
+      // 1. Headers: ### Title or ## Title -> Clean Section Headings (removes ### entirely)
+      if (trimmed.startsWith("###") || trimmed.startsWith("##")) {
+        const cleanTitle = trimmed.replace(/^#+\s*/, "");
+        elements.push(
+          <div key={idx} className="text-xs font-black text-slate-900 border-b border-purple-100/80 pb-1 mt-3 mb-1.5 flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-600 shrink-0"></span>
+            <span>{cleanTitle}</span>
+          </div>
+        );
+        return;
+      }
+
+      // 2. Subheaders: #### Subtitle or Numbered Section (e.g. #### 1. Overall Summary) -> Clean Sub-heading
+      if (trimmed.startsWith("####") || /^(\d+\.\s+[A-Za-z]+)/.test(trimmed)) {
+        const cleanSub = trimmed.replace(/^#+\s*/, "");
+        elements.push(
+          <div key={idx} className="text-xs font-black text-purple-950 mt-2.5 mb-1 flex items-center gap-1.5">
+            <span className="text-purple-600 font-black">▸</span>
+            <span dangerouslySetInnerHTML={{ __html: formatInline(cleanSub) }} />
+          </div>
+        );
+        return;
+      }
+
+      // 3. Bullet points: * Bullet or - Bullet -> Cleanly Indented Bullet with Round Indicator
+      if (trimmed.startsWith("* ") || trimmed.startsWith("- ")) {
+        const cleanBullet = trimmed.replace(/^[\*\-]\s+/, "");
+        elements.push(
+          <div key={idx} className="flex items-start gap-2.5 my-1 pl-1 text-slate-700 leading-relaxed text-xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-500 mt-1.5 shrink-0" />
+            <div className="flex-1" dangerouslySetInnerHTML={{ __html: formatInline(cleanBullet) }} />
+          </div>
+        );
+        return;
+      }
+
+      // 4. Notes: *(Note: ...)* or *Note: ...* -> Clean Highlighted Box
+      if ((trimmed.startsWith("*(") && trimmed.endsWith(")*")) || trimmed.toLowerCase().startsWith("*note:")) {
+        const cleanNote = trimmed.replace(/^\*\(?/, "").replace(/\)?\*$/, "");
+        elements.push(
+          <div key={idx} className="p-3 bg-purple-50/70 rounded-xl border border-purple-200/60 text-[11px] text-purple-900 leading-relaxed my-2 flex items-start gap-2">
+            <AlertCircle className="w-3.5 h-3.5 text-purple-600 mt-0.5 shrink-0" />
+            <div className="flex-1 italic" dangerouslySetInnerHTML={{ __html: formatInline(cleanNote) }} />
+          </div>
+        );
+        return;
+      }
+
+      // 5. Standard paragraph with clean line-height and aligned text
+      elements.push(
+        <p
+          key={idx}
+          className="text-slate-700 text-xs leading-relaxed font-normal my-1"
+          dangerouslySetInnerHTML={{ __html: formatInline(trimmed) }}
+        />
+      );
+    });
+
+    return <div className="space-y-0.5">{elements}</div>;
+  };
+
   const handleOdooQuery = async (queryText?: string) => {
     const q = (queryText !== undefined ? queryText : odooQuestion).trim();
     if (!q) return;
+
+    // Conversational WhatsApp dispatch detection
+    const waMatch = q.match(/send (?:this )?(?:report )?to whatsapp (?:number )?([+\d\s-]+)/i);
+    if (waMatch && odooReport) {
+      const phone = waMatch[1].replace(/[^0-9]/g, "");
+      if (phone) {
+        setWhatsAppPhone(phone);
+        setIsWhatsAppModalOpen(true);
+        setOdooQuestion("");
+        return;
+      }
+    }
+
     if (!odooUrl || !odooDb || !odooUsername || !odooApiKey) {
       setShowOdooConfigModal(true);
       return;
@@ -1837,7 +2128,34 @@ export default function CustomerBotStudio() {
                   </h3>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={handleExportExcel}
+                    title="Export as professional Excel (.xlsx) workbook"
+                    className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    Excel
+                  </button>
+
+                  <button
+                    onClick={handleExportPDF}
+                    title="Print or Save clean Executive PDF Report"
+                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+                  >
+                    <Download className="w-3.5 h-3.5 text-blue-600" />
+                    PDF
+                  </button>
+
+                  <button
+                    onClick={() => setIsWhatsAppModalOpen(true)}
+                    title="Send query report to WhatsApp via Meta Cloud API or direct link"
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-emerald-600/20"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    WhatsApp
+                  </button>
+
                   <button
                     onClick={() => {
                       setOdooReport(null);
@@ -1845,7 +2163,7 @@ export default function CustomerBotStudio() {
                     }}
                     className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition"
                   >
-                    Clear Result
+                    Clear
                   </button>
                 </div>
               </div>
@@ -1865,19 +2183,7 @@ export default function CustomerBotStudio() {
                     </span>
                   </div>
                   <div className="text-slate-800 text-xs leading-relaxed font-medium pl-8 space-y-1.5">
-                    {odooReport.direct_answer.split("\n").map((line: string, lIdx: number) => {
-                      if (!line.trim()) return <div key={lIdx} className="h-1" />;
-                      return (
-                        <p
-                          key={lIdx}
-                          dangerouslySetInnerHTML={{
-                            __html: line
-                              .replace(/\*\*(.*?)\*\*/g, '<strong class="text-purple-950 font-bold">$1</strong>')
-                              .replace(/`([^`]+)`/g, '<code class="bg-purple-100/80 text-purple-800 px-1.5 py-0.5 rounded text-[11px] font-mono font-semibold">$1</code>')
-                          }}
-                        />
-                      );
-                    })}
+                    {renderDirectAnswer(odooReport.direct_answer)}
                   </div>
                 </div>
               )}
@@ -2071,6 +2377,155 @@ export default function CustomerBotStudio() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Dispatch Modal */}
+      {isWhatsAppModalOpen && odooReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden">
+            <div className="p-6 bg-gradient-to-r from-emerald-600 to-teal-700 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white">
+                    <Share2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-base leading-snug">Dispatch to WhatsApp</h3>
+                    <p className="text-emerald-100 text-xs">Send live analytics & executive summary</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setIsWhatsAppModalOpen(false);
+                    setWhatsAppStatusMsg(null);
+                  }}
+                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Report Summary Preview */}
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs space-y-1">
+                <div className="font-bold text-slate-800 flex items-center justify-between">
+                  <span>{odooReport.model_label || "Analytics Report"}</span>
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-semibold">
+                    {(odooReport.total_found ?? odooReport.records?.length ?? 0).toLocaleString()} Records
+                  </span>
+                </div>
+                <p className="text-slate-500 text-[11px] line-clamp-2">
+                  {odooReport.direct_answer ? odooReport.direct_answer.replace(/^#+\s*/gm, "") : "Direct report overview"}
+                </p>
+              </div>
+
+              {/* Phone Input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-emerald-600" /> WhatsApp Number (with Country Code)
+                </label>
+                <input
+                  type="tel"
+                  placeholder="e.g. +971501234567 or 919876543210"
+                  value={whatsAppPhone}
+                  onChange={(e) => setWhatsAppPhone(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-mono outline-none focus:border-emerald-600 transition"
+                />
+                <p className="text-[10px] text-slate-400">
+                  Include country code (e.g. 971 for UAE, 91 for India, 1 for US/Canada).
+                </p>
+              </div>
+
+              {/* Meta Cloud API Optional Configuration Toggle */}
+              <div className="pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowMetaSettings(!showMetaSettings)}
+                  className="text-[11px] font-semibold text-purple-700 hover:text-purple-900 flex items-center gap-1"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  {showMetaSettings ? "Hide Meta Cloud API Settings" : "Custom Meta Cloud API Credentials (Optional)"}
+                </button>
+
+                {showMetaSettings && (
+                  <div className="mt-2.5 p-3.5 bg-purple-50/50 rounded-2xl border border-purple-100 space-y-2.5 text-xs">
+                    <p className="text-[10px] text-slate-500">
+                      If configured, messages are dispatched automatically in the background via the official Meta Cloud API. Otherwise, it opens directly in WhatsApp Web.
+                    </p>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-700 mb-1">Meta Phone Number ID</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 104593829102938"
+                        value={metaPhoneNumberId}
+                        onChange={(e) => {
+                          setMetaPhoneNumberId(e.target.value);
+                          localStorage.setItem("maz_meta_phone_id", e.target.value);
+                        }}
+                        className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-mono outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-700 mb-1">Meta Permanent Access Token</label>
+                      <input
+                        type="password"
+                        placeholder="EAAB..."
+                        value={metaAccessToken}
+                        onChange={(e) => {
+                          setMetaAccessToken(e.target.value);
+                          localStorage.setItem("maz_meta_token", e.target.value);
+                        }}
+                        className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-mono outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Status Message */}
+              {whatsAppStatusMsg && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs font-medium flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>{whatsAppStatusMsg}</span>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-between gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={handleOpenWhatsAppWeb}
+                  disabled={!whatsAppPhone.trim()}
+                  className="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+                  title="Open WhatsApp chat with pre-filled message"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  Open WhatsApp Web
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSendMetaWhatsApp}
+                  disabled={isSendingWhatsApp || !whatsAppPhone.trim()}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-1.5 shadow-md shadow-emerald-600/20 disabled:opacity-50"
+                >
+                  {isSendingWhatsApp ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-3.5 h-3.5" />
+                      Dispatch via API
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
