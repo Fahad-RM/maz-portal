@@ -1843,11 +1843,9 @@ export default function CustomerBotStudio() {
                       </span>
                       <span>Direct Answer:</span>
                     </div>
-                    {odooReport.ai_provider && (
-                      <span className="text-[10px] font-semibold text-purple-700 bg-purple-100/90 px-2.5 py-0.5 rounded-full border border-purple-200 flex items-center gap-1 shadow-xs">
-                        <Sparkles className="w-3 h-3 text-purple-600" /> Powered by {odooReport.ai_provider}
-                      </span>
-                    )}
+                    <span className="text-[10px] font-semibold text-purple-700 bg-purple-100/90 px-2.5 py-0.5 rounded-full border border-purple-200 flex items-center gap-1 shadow-xs">
+                      <Sparkles className="w-3 h-3 text-purple-600" /> Powered by MAZ AI
+                    </span>
                   </div>
                   <div className="text-slate-800 text-xs leading-relaxed font-medium pl-8 space-y-1.5">
                     {odooReport.direct_answer.split("\n").map((line: string, lIdx: number) => {
