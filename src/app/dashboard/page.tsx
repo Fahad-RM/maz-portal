@@ -1835,12 +1835,19 @@ export default function CustomerBotStudio() {
 
               {/* Direct Specific Answer Card */}
               {odooReport.direct_answer && (
-                <div className="p-5 bg-gradient-to-r from-purple-50/90 via-fuchsia-50/50 to-purple-50/80 rounded-2xl border border-purple-200/90 shadow-sm space-y-2">
-                  <div className="flex items-center gap-2 text-purple-900 font-extrabold text-xs">
-                    <span className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center text-xs shadow-sm">
-                      <Sparkles className="w-3.5 h-3.5" />
-                    </span>
-                    <span>Direct Answer:</span>
+                <div className="p-5 bg-gradient-to-r from-purple-50/90 via-fuchsia-50/50 to-purple-50/80 rounded-2xl border border-purple-200/90 shadow-sm space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-purple-900 font-extrabold text-xs">
+                      <span className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center text-xs shadow-sm">
+                        <Sparkles className="w-3.5 h-3.5" />
+                      </span>
+                      <span>Direct Answer:</span>
+                    </div>
+                    {odooReport.ai_provider && (
+                      <span className="text-[10px] font-semibold text-purple-700 bg-purple-100/90 px-2.5 py-0.5 rounded-full border border-purple-200 flex items-center gap-1 shadow-xs">
+                        <Sparkles className="w-3 h-3 text-purple-600" /> Powered by {odooReport.ai_provider}
+                      </span>
+                    )}
                   </div>
                   <div className="text-slate-800 text-xs leading-relaxed font-medium pl-8 space-y-1.5">
                     {odooReport.direct_answer.split("\n").map((line: string, lIdx: number) => {
