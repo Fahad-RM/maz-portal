@@ -137,7 +137,7 @@ export default function RootLayout({
               </a>
               <a
                 href="/dashboard"
-                className="px-3.5 py-1.5 rounded-xl text-xs font-bold glass-water-button text-white transition hover:-translate-y-px"
+                className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-purple-700 bg-purple-50/80 hover:bg-purple-100/80 border border-purple-200/70 transition shadow-xs flex items-center gap-1"
               >
                 Customer Studio
               </a>
