@@ -9,6 +9,7 @@ import {
   Sparkles, HelpCircle, Phone, MessageCircle, Mail, Globe,
   FileText, Database, X, CheckCircle
 } from "lucide-react";
+import { safeStorage } from "../lib/safeStorage";
 
 export default function SuperbPortalLogin() {
   const router = useRouter();
@@ -37,8 +38,8 @@ export default function SuperbPortalLogin() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "Invalid email or password.");
-      localStorage.setItem("maz_portal_api_key", data.token);
-      if (data.tenant) localStorage.setItem("maz_tenant_info", JSON.stringify(data.tenant));
+      safeStorage.setItem("maz_portal_api_key", data.token);
+      if (data.tenant) safeStorage.setItem("maz_tenant_info", JSON.stringify(data.tenant));
       setAuthSuccess("Credentials verified! Loading your Customer Studio...");
       setTimeout(() => router.push(`/dashboard?key=${encodeURIComponent(data.token)}`), 500);
     } catch (err: any) {
@@ -62,7 +63,7 @@ export default function SuperbPortalLogin() {
         headers: { "X-SUPER-ADMIN-KEY": keyToUse },
       });
       if (!res.ok) throw new Error("Invalid Super Admin Master Passkey. Access denied.");
-      localStorage.setItem("maz_admin_master_key", keyToUse);
+      safeStorage.setItem("maz_admin_master_key", keyToUse);
       setAuthSuccess("Super-Admin verified! Opening Control Panel...");
       setTimeout(() => router.push("/admin"), 500);
     } catch (err: any) {
@@ -83,7 +84,7 @@ export default function SuperbPortalLogin() {
       {/* Edge-to-Edge Background Artwork (Full 100vw, No Side Cutoffs, Soft 25% Opacity) */}
       <div 
         className="fixed inset-0 z-0 w-full h-full bg-cover bg-center pointer-events-none opacity-[0.25] transition-opacity duration-700 select-none"
-        style={{ backgroundImage: "url('/ai-touch-login.png')" }}
+        style={{ backgroundImage: "url('/ai-touch-login.jpg')" }}
         aria-hidden
       />
 
@@ -364,7 +365,7 @@ export default function SuperbPortalLogin() {
 
         {/* Global Multi-Tenant Disclaimer */}
         <div className="mt-3 text-center text-[10.5px] text-slate-500 font-medium">
-          © 2026 Maifelz Technologies LLP • ISO-27001 Multi-Tenant Isolation • Sub-Second RAG
+          © 2026 Maifelz Technologies LLP • Enterprise-Grade Multi-Tenant Isolation • Sub-Second Streaming RAG
         </div>
       </div>
 

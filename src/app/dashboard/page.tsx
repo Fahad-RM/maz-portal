@@ -9,6 +9,7 @@ import {
   User, Lock, Eye, EyeOff, Shield, Zap, AlertCircle, BarChart3, RefreshCw, MessageSquare,
   Search, Settings, Database, FileSpreadsheet, Download, Share2, Phone, ExternalLink, X
 } from "lucide-react";
+import { safeStorage } from "../../lib/safeStorage";
 
 interface TenantProfile {
   id: string;
@@ -95,8 +96,8 @@ export default function CustomerBotStudio() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setMetaPhoneNumberId(localStorage.getItem("maz_meta_phone_id") || "");
-      setMetaAccessToken(localStorage.getItem("maz_meta_token") || "");
+      setMetaPhoneNumberId(safeStorage.getItem("maz_meta_phone_id") || "");
+      setMetaAccessToken(safeStorage.getItem("maz_meta_token") || "");
     }
   }, []);
 
@@ -490,7 +491,7 @@ export default function CustomerBotStudio() {
     if (typeof window === "undefined") return;
     const urlParams = new URLSearchParams(window.location.search);
     const keyParam = urlParams.get("key");
-    const storedKey = localStorage.getItem("maz_portal_api_key");
+    const storedKey = safeStorage.getItem("maz_portal_api_key");
     const activeKey = keyParam || storedKey;
 
     if (activeKey) {
@@ -522,7 +523,7 @@ export default function CustomerBotStudio() {
       const bot = userBots.find((b: any) => b.bot_id === "maz_maifelz_live") || userBots[0];
       
       setApiKey(keyToVerify.trim());
-      localStorage.setItem("maz_portal_api_key", keyToVerify.trim());
+      safeStorage.setItem("maz_portal_api_key", keyToVerify.trim());
       setIsAuthenticated(true);
       loadBotData(bot, keyToVerify.trim());
 
@@ -534,7 +535,7 @@ export default function CustomerBotStudio() {
         if (pRes.ok) {
           const pData = await pRes.json();
           setTenantProfile(pData.tenant);
-          localStorage.setItem("maz_tenant_info", JSON.stringify(pData.tenant));
+          safeStorage.setItem("maz_tenant_info", JSON.stringify(pData.tenant));
           
           // Auto-configure credentials for Maifelz, otherwise load client's saved credentials
           if (pData.tenant?.company_name?.toLowerCase().includes("maifelz")) {
@@ -543,8 +544,8 @@ export default function CustomerBotStudio() {
             setOdooUsername("fahad@maifelz.com");
             setOdooApiKey("04474c6cbf27ffae05a5e4c85d7bbe4ad00df9cb");
           } else {
-            // Check if tenant has their own Odoo credentials saved in localStorage
-            const savedOdoo = localStorage.getItem(`maz_odoo_creds_${pData.tenant?.id}`);
+            // Check if tenant has their own Odoo credentials saved in safeStorage
+            const savedOdoo = safeStorage.getItem(`maz_odoo_creds_${pData.tenant?.id}`);
             if (savedOdoo) {
               try {
                 const parsed = JSON.parse(savedOdoo);
@@ -586,9 +587,9 @@ export default function CustomerBotStudio() {
       }
 
       setApiKey(data.token);
-      localStorage.setItem("maz_portal_api_key", data.token);
+      safeStorage.setItem("maz_portal_api_key", data.token);
       setTenantProfile(data.tenant);
-      localStorage.setItem("maz_tenant_info", JSON.stringify(data.tenant));
+      safeStorage.setItem("maz_tenant_info", JSON.stringify(data.tenant));
       setIsAuthenticated(true);
 
       if (data.bots && data.bots.length > 0) {
@@ -664,8 +665,8 @@ export default function CustomerBotStudio() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("maz_portal_api_key");
-    localStorage.removeItem("maz_tenant_info");
+    safeStorage.removeItem("maz_portal_api_key");
+    safeStorage.removeItem("maz_tenant_info");
     setApiKey("");
     setTenantProfile(null);
     setIsAuthenticated(false);
@@ -2335,7 +2336,7 @@ export default function CustomerBotStudio() {
               onSubmit={(e) => {
                 e.preventDefault();
                 if (tenantProfile?.id) {
-                  localStorage.setItem(
+                  safeStorage.setItem(
                     `maz_odoo_creds_${tenantProfile.id}`,
                     JSON.stringify({
                       url: odooUrl.trim(),
@@ -2504,7 +2505,7 @@ export default function CustomerBotStudio() {
                         value={metaPhoneNumberId}
                         onChange={(e) => {
                           setMetaPhoneNumberId(e.target.value);
-                          localStorage.setItem("maz_meta_phone_id", e.target.value);
+                          safeStorage.setItem("maz_meta_phone_id", e.target.value);
                         }}
                         className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-mono outline-none"
                       />
@@ -2517,7 +2518,7 @@ export default function CustomerBotStudio() {
                         value={metaAccessToken}
                         onChange={(e) => {
                           setMetaAccessToken(e.target.value);
-                          localStorage.setItem("maz_meta_token", e.target.value);
+                          safeStorage.setItem("maz_meta_token", e.target.value);
                         }}
                         className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-mono outline-none"
                       />

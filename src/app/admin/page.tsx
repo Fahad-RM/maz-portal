@@ -6,6 +6,7 @@ import {
   XCircle, Copy, Key, ArrowUpRight, Search, ShieldCheck, 
   Pencil, RefreshCw, Eye, EyeOff, Check, Send, AlertTriangle, Lock, BarChart3
 } from "lucide-react";
+import { safeStorage } from "../../lib/safeStorage";
 
 interface TenantData {
   id: string;
@@ -146,11 +147,11 @@ export default function AdminControlPanel() {
 
       setAdminKey(keyCandidate.trim());
       setIsAuthenticated(true);
-      localStorage.setItem("maz_admin_master_key", keyCandidate.trim());
+      safeStorage.setItem("maz_admin_master_key", keyCandidate.trim());
     } catch (err: any) {
       setAuthError(err.message || "Authorization failed.");
       setIsAuthenticated(false);
-      localStorage.removeItem("maz_admin_master_key");
+      safeStorage.removeItem("maz_admin_master_key");
     } finally {
       setIsVerifying(false);
       setIsLoading(false);
@@ -159,7 +160,7 @@ export default function AdminControlPanel() {
 
   // Check saved session on mount
   useEffect(() => {
-    const saved = localStorage.getItem("maz_admin_master_key");
+    const saved = safeStorage.getItem("maz_admin_master_key");
     if (saved) {
       verifyAndSetKey(saved);
     } else {
@@ -173,7 +174,7 @@ export default function AdminControlPanel() {
   };
 
   const handleLockControlPanel = () => {
-    localStorage.removeItem("maz_admin_master_key");
+    safeStorage.removeItem("maz_admin_master_key");
     setAdminKey("");
     setIsAuthenticated(false);
     setAuthInputKey("");

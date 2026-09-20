@@ -102,8 +102,8 @@ export default function RootLayout({
       <body className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-purple-600 selection:text-white relative">
         {/* Fixed Enterprise Background Image with Crisp Readability */}
         <div 
-          className="fixed inset-0 pointer-events-none z-0 bg-cover bg-center bg-no-repeat opacity-[0.16] mix-blend-multiply"
-          style={{ backgroundImage: "url('/bg-enterprise.jpg')" }}
+          className="fixed inset-0 pointer-events-none z-0 bg-cover bg-center bg-no-repeat opacity-[0.14]"
+          style={{ backgroundImage: "url('/ai-touch-login.jpg')" }}
           aria-hidden
         />
         {/* Soft daylight gradient overlay */}
