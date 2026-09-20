@@ -110,14 +110,14 @@ export default function RootLayout({
         <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-b from-white/80 via-white/50 to-slate-50/80" aria-hidden />
 
         <div className="sticky top-0 z-50 flex justify-center px-4 pt-3 pb-0 pointer-events-none">
-          <header className="pointer-events-auto w-full max-w-5xl bg-white/90 backdrop-blur-2xl border border-slate-200/80 rounded-2xl shadow-lg shadow-slate-900/[0.06] px-4 sm:px-6 h-14 flex items-center justify-between transition-all duration-300">
+          <header className="pointer-events-auto w-full max-w-5xl bg-white/70 backdrop-blur-2xl border border-white/80 rounded-2xl shadow-lg shadow-slate-900/[0.04] px-4 sm:px-6 h-14 flex items-center justify-between transition-all duration-300">
             <a href="/" className="flex items-center gap-2.5 group">
               <img
                 src="/maz-logo.png"
                 alt="MAZ by Maifelz Technologies LLP"
                 className="h-7 sm:h-8 w-auto object-contain filter drop-shadow-sm group-hover:scale-105 transition duration-200"
               />
-              <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-200/80 tracking-wide">
+              <span className="hidden sm:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-cyan-50/80 text-cyan-800 border border-cyan-200/80 tracking-wide">
                 Enterprise AI Engine
               </span>
             </a>
@@ -125,19 +125,19 @@ export default function RootLayout({
             <nav className="flex items-center gap-1.5 sm:gap-2">
               <a
                 href="/pricing"
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-purple-700 hover:bg-purple-50/60 transition flex items-center gap-1"
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:text-purple-700 hover:bg-white/70 transition flex items-center gap-1"
               >
                 Pricing &amp; Plans
               </a>
               <a
                 href="/admin"
-                className="hidden sm:inline-flex px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 transition"
+                className="hidden sm:inline-flex px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-white/70 border border-white/80 transition"
               >
                 Super-Admin
               </a>
               <a
                 href="/dashboard"
-                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-800 hover:from-purple-800 hover:to-purple-900 text-white transition shadow-sm shadow-purple-900/20 hover:shadow-md hover:shadow-purple-900/30 hover:-translate-y-px"
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold glass-water-button text-white transition hover:-translate-y-px"
               >
                 Customer Studio
               </a>
@@ -147,7 +147,7 @@ export default function RootLayout({
 
         <main className="flex-1 pt-2 relative z-10">{children}</main>
 
-        <footer className="relative z-10 border-t border-slate-200/80 bg-white/90 backdrop-blur-md py-4 text-center text-xs text-slate-600">
+        <footer className="relative z-10 border-t border-white/70 bg-white/60 backdrop-blur-xl py-4 text-center text-xs text-slate-600">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <img src="/maz-logo.png" alt="Maifelz" className="h-6 w-auto max-h-6 object-contain shrink-0" />
