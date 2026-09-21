@@ -1823,6 +1823,7 @@ export default function CustomerBotStudio() {
                 {conversations.map((c) => {
                   const isSelected = selectedConversation?.id === c.id;
                   const firstUserMsg = c.messages?.find((m: any) => m.role === "user")?.content || "Session started";
+                  const hasLead = c.messages?.some((m: any) => m.role === "system" || m.content?.includes("Contact Details"));
                   return (
                     <div
                       key={c.id}
@@ -1837,9 +1838,16 @@ export default function CustomerBotStudio() {
                         <span className="text-[10px] font-bold text-slate-400 font-mono">
                           {c.session_token.slice(0, 12)}...
                         </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 font-semibold text-slate-600">
-                          {c.message_count} msgs
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {hasLead && (
+                            <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-100 font-bold text-emerald-700">
+                              🎯 Lead
+                            </span>
+                          )}
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 font-semibold text-slate-600">
+                            {c.message_count} msgs
+                          </span>
+                        </div>
                       </div>
                       <div className="text-xs font-semibold text-slate-800 line-clamp-2 mb-2">
                         💬 "{firstUserMsg}"
@@ -1853,10 +1861,10 @@ export default function CustomerBotStudio() {
               </div>
 
               {/* Conversation Detail View */}
-              <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col min-h-[450px]">
+              <div className="lg:col-span-2 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col min-h-[500px]">
                 {selectedConversation ? (
                   <>
-                    <div className="pb-4 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-2">
                       <div>
                         <div className="font-bold text-slate-900 text-sm">Transcript View</div>
                         <div className="text-[11px] text-slate-400 font-mono">Session: {selectedConversation.session_token}</div>
@@ -1878,6 +1886,18 @@ export default function CustomerBotStudio() {
                     <div className="flex-1 overflow-y-auto space-y-3.5 py-4 max-h-[500px]">
                       {selectedConversation.messages?.map((m: any) => {
                         const isUser = m.role === "user";
+                        const isSystem = m.role === "system";
+
+                        if (isSystem) {
+                          return (
+                            <div key={m.id} className="flex justify-center my-3">
+                              <div className="bg-emerald-50 text-emerald-800 border border-emerald-200/90 px-4 py-2 rounded-2xl text-xs font-semibold shadow-sm flex items-center gap-2 max-w-[90%] text-center">
+                                <span>{m.content}</span>
+                              </div>
+                            </div>
+                          );
+                        }
+
                         return (
                           <div
                             key={m.id}

@@ -988,15 +988,19 @@
       const card = document.createElement("div");
       card.id = "maz-lead-capture-card";
       card.className = "maz-lead-card";
+      const brandColor = botConfig.brand_color || "#831843";
       card.innerHTML = `
-        <h4>📬 Connect with our specialist</h4>
+        <h4 style="color:${brandColor};">📬 Connect with our specialist</h4>
+        <div style="font-size:11px;color:#64748b;margin-bottom:8px;line-height:1.4;">Leave your contact details so our team can follow up with you promptly.</div>
         <input type="text" id="maz-lead-name" class="maz-lead-input" placeholder="Your Name" />
-        <input type="email" id="maz-lead-email" class="maz-lead-input" placeholder="Your Work Email" />
-        <input type="tel" id="maz-lead-phone" class="maz-lead-input" placeholder="Phone / WhatsApp Number" />
-        <button class="maz-lead-btn" id="maz-lead-submit">Request Free Consultation</button>
+        <input type="email" id="maz-lead-email" class="maz-lead-input" placeholder="Work Email Address" />
+        <input type="tel" id="maz-lead-phone" class="maz-lead-input" placeholder="WhatsApp / Phone Number" />
+        <button class="maz-lead-btn" id="maz-lead-submit" style="background:${brandColor};">Request Consultation</button>
       `;
       chatBody.appendChild(card);
-      chatBody.scrollTop = chatBody.scrollHeight;
+      setTimeout(() => {
+        chatBody.scrollTop = chatBody.scrollHeight;
+      }, 50);
 
       const submitBtn = document.getElementById("maz-lead-submit");
       bindTap(submitBtn, () => {
@@ -1008,6 +1012,9 @@
           alert("Please provide an email or phone number so our team can reach you.");
           return;
         }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Submitting...";
 
         fetch(`${apiHost}/api/v1/chat/lead`, {
           method: "POST",
@@ -1022,9 +1029,14 @@
         })
         .then(r => r.json())
         .then(() => {
-          card.innerHTML = "<div style=\"color:#059669; font-weight:700; font-size:13px; padding:4px 0;\">✅ Thank you! Our lead consultant will reach out to you shortly.</div>";
+          card.innerHTML = "<div style=\"color:#059669; font-weight:700; font-size:13px; padding:6px 0;\">✅ Thank you! Our specialist will reach out to you shortly.</div>";
+          setTimeout(() => {
+            chatBody.scrollTop = chatBody.scrollHeight;
+          }, 50);
         })
         .catch(() => {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Request Consultation";
           card.innerHTML = "<div style=\"color:#dc2626; font-size:12px;\">Notice: Could not submit. Please try again.</div>";
         });
       });
@@ -1032,9 +1044,10 @@
 
     // Stream Typewriter Manager
     class StreamTypewriter {
-      constructor(targetElement, onScroll) {
+      constructor(targetElement, onScroll, onFinish) {
         this.target = targetElement;
         this.onScroll = onScroll;
+        this.onFinish = onFinish;
         this.queue = "";
         this.displayed = "";
         this.timer = null;
@@ -1057,6 +1070,11 @@
           this.timer = setTimeout(() => this.step(), 14);
         } else {
           this.timer = null;
+          if (this.onFinish) {
+            const cb = this.onFinish;
+            this.onFinish = null;
+            cb();
+          }
         }
       }
 
@@ -1070,6 +1088,11 @@
         if (this.timer) {
           clearTimeout(this.timer);
           this.timer = null;
+        }
+        if (this.onFinish) {
+          const cb = this.onFinish;
+          this.onFinish = null;
+          cb();
         }
       }
     }
@@ -1101,8 +1124,34 @@
 
         removeTypingIndicator();
         const botBubble = appendBotMessage("");
+
+        const triggerLeadCheck = () => {
+          const userLower = text.toLowerCase();
+          const visitorIntent = [
+            "price", "pricing", "cost", "quote", "quotation", "rate", "fee", "estimate",
+            "demo", "talk", "call", "schedule", "book", "meeting", "consult", "consultation",
+            "contact", "connect", "reach", "hire", "implement", "integration", "support",
+            "service", "whatsapp", "xero", "odoo", "erp", "sales", "proposal", "amc", "fire",
+            "yes", "sure", "ok", "yeah", "yep", "please", "interested", "proceed", "definitely"
+          ].some(w => userLower.includes(w));
+
+          const aiLower = fullAssistantText.toLowerCase();
+          const aiOffered = [
+            "specialist", "discovery call", "consultation", "reach out", "connect",
+            "contact details", "leave your", "share your", "email or phone", "below",
+            "schedule a", "live demo", "quotation", "tailored estimate", "our team",
+            "form below", "contact card"
+          ].some(w => aiLower.includes(w));
+
+          if (visitorIntent || aiOffered || conversationHistory.length >= 2) {
+            setTimeout(offerLeadCapture, 250);
+          }
+        };
+
         const typewriter = new StreamTypewriter(botBubble, () => {
           chatBody.scrollTop = chatBody.scrollHeight;
+        }, () => {
+          triggerLeadCheck();
         });
 
         let fullAssistantText = "";
@@ -1143,14 +1192,10 @@
         if (!fullAssistantText) {
           botBubble.innerHTML = formatMarkdown("Thank you for reaching out! How can I assist you further with our solutions?");
           fullAssistantText = "Thank you for reaching out!";
+          triggerLeadCheck();
         }
 
         conversationHistory.push({ role: "assistant", content: fullAssistantText });
-
-        const lower = text.toLowerCase();
-        if (lower.includes("price") || lower.includes("cost") || lower.includes("talk") || lower.includes("demo") || lower.includes("quote") || conversationHistory.length >= 4) {
-          setTimeout(offerLeadCapture, 800);
-        }
 
       } catch (err) {
         console.error("[MAZ Error]", err);
