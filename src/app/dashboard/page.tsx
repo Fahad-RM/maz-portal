@@ -1,15 +1,24 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
 import { 
   Bot, Palette, BookOpen, Flame, Code, UploadCloud, 
   Globe, Plus, Check, Copy, Sparkles, Send, Save, 
   Trash2, LogOut, Key, ArrowUpRight, Loader2, FileText,
   User, Lock, Eye, EyeOff, Shield, Zap, AlertCircle, BarChart3, RefreshCw, MessageSquare,
-  Search, Settings, Database, FileSpreadsheet, Download, Share2, Phone, ExternalLink, X
+  Search, Settings, Database, FileSpreadsheet, Download, Share2, Phone, ExternalLink, X,
+  PanelLeftClose, PanelLeft, Clock
 } from "lucide-react";
 import { safeStorage } from "../../lib/safeStorage";
+
+interface OdooChatMessage {
+  id: string;
+  question: string;
+  report?: any;
+  error?: string;
+  timestamp: string;
+}
 
 interface TenantProfile {
   id: string;
@@ -84,6 +93,9 @@ export default function CustomerBotStudio() {
   const [isQueryingOdoo, setIsQueryingOdoo] = useState(false);
   const [odooReport, setOdooReport] = useState<any>(null);
   const [odooError, setOdooError] = useState<string | null>(null);
+  const [odooChatHistory, setOdooChatHistory] = useState<OdooChatMessage[]>([]);
+  const [isOdooHistoryOpen, setIsOdooHistoryOpen] = useState(true);
+  const odooMessagesEndRef = useRef<HTMLDivElement>(null);
 
   // WhatsApp Dispatch & Export States
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
@@ -98,6 +110,18 @@ export default function CustomerBotStudio() {
     if (typeof window !== "undefined") {
       setMetaPhoneNumberId(safeStorage.getItem("maz_meta_phone_id") || "");
       setMetaAccessToken(safeStorage.getItem("maz_meta_token") || "");
+      const savedHistory = safeStorage.getItem("maz_odoo_chat_history");
+      if (savedHistory) {
+        try {
+          const parsed = JSON.parse(savedHistory);
+          if (Array.isArray(parsed)) {
+            setOdooChatHistory(parsed);
+            if (parsed.length > 0 && parsed[parsed.length - 1].report) {
+              setOdooReport(parsed[parsed.length - 1].report);
+            }
+          }
+        } catch (_) {}
+      }
     }
   }, []);
 
@@ -174,28 +198,29 @@ export default function CustomerBotStudio() {
     window.open(url, "_blank");
   };
 
-  const handleExportExcel = () => {
-    if (!odooReport) return;
+  const handleExportExcel = (reportToExport?: any) => {
+    const rep = reportToExport || odooReport;
+    if (!rep) return;
     try {
       const wb = XLSX.utils.book_new();
-      if (odooReport.records && odooReport.records.length > 0) {
-        const wsData = XLSX.utils.json_to_sheet(odooReport.records);
+      if (rep.records && rep.records.length > 0) {
+        const wsData = XLSX.utils.json_to_sheet(rep.records);
         XLSX.utils.book_append_sheet(wb, wsData, "Live Report");
       }
       const summaryRows = [
-        ["Report Title", odooReport.model_label || "Odoo Report"],
-        ["Target Model", odooReport.model || ""],
-        ["Period", odooReport.period || "All time"],
-        ["Total Database Records", odooReport.total_found ?? 0],
-        ["Total Amount", odooReport.total_amount ? Number(odooReport.total_amount).toFixed(2) : "N/A"],
+        ["Report Title", rep.model_label || "Odoo Report"],
+        ["Target Model", rep.model || ""],
+        ["Period", rep.period || "All time"],
+        ["Total Database Records", rep.total_found ?? 0],
+        ["Total Amount", rep.total_amount ? Number(rep.total_amount).toFixed(2) : "N/A"],
         ["Generated At", new Date().toLocaleString()],
         ["", ""],
-        ["Executive Analysis", odooReport.direct_answer ? odooReport.direct_answer.replace(/^#+\s*/gm, "") : ""]
+        ["Executive Analysis", rep.direct_answer ? rep.direct_answer.replace(/^#+\s*/gm, "") : ""]
       ];
       const wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
       XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
 
-      const filename = `${(odooReport.model_label || "odoo_report").toLowerCase().replace(/[^a-z0-9]/g, "_")}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      const filename = `${(rep.model_label || "odoo_report").toLowerCase().replace(/[^a-z0-9]/g, "_")}_${new Date().toISOString().slice(0, 10)}.xlsx`;
       XLSX.writeFile(wb, filename);
     } catch (err) {
       console.error("Failed to export Excel:", err);
@@ -203,17 +228,18 @@ export default function CustomerBotStudio() {
     }
   };
 
-  const handleExportPDF = () => {
-    if (!odooReport) return;
+  const handleExportPDF = (reportToExport?: any) => {
+    const rep = reportToExport || odooReport;
+    if (!rep) return;
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
       window.print();
       return;
     }
 
-    const tableHeaders = odooReport.records && odooReport.records.length > 0 ? Object.keys(odooReport.records[0]) : [];
-    const tableRowsHtml = odooReport.records && odooReport.records.length > 0
-      ? odooReport.records.map((row: any) => `
+    const tableHeaders = rep.records && rep.records.length > 0 ? Object.keys(rep.records[0]) : [];
+    const tableRowsHtml = rep.records && rep.records.length > 0
+      ? rep.records.map((row: any) => `
         <tr>
           ${Object.values(row).map((val: any) => `<td style="padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 11px; color: #1e293b;">${val ?? '—'}</td>`).join('')}
         </tr>
@@ -412,6 +438,22 @@ export default function CustomerBotStudio() {
       if (!res.ok) throw new Error(data.detail || "Query failed");
       setOdooReport(data.report);
       setOdooConnected(true);
+
+      const newMsg: OdooChatMessage = {
+        id: `msg_${Date.now()}`,
+        question: q,
+        report: data.report,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setOdooChatHistory(prev => {
+        const next = [...prev, newMsg];
+        safeStorage.setItem("maz_odoo_chat_history", JSON.stringify(next));
+        return next;
+      });
+      setOdooQuestion("");
+      setTimeout(() => {
+        odooMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
     } catch (err: any) {
       setOdooError(err.message || "Could not query Odoo");
     } finally {
@@ -2030,6 +2072,14 @@ export default function CustomerBotStudio() {
                 )}
 
                 <button
+                  onClick={() => setIsOdooHistoryOpen(!isOdooHistoryOpen)}
+                  className={`p-2 rounded-xl transition border ${isOdooHistoryOpen ? "bg-purple-100 text-purple-700 border-purple-300" : "bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200"}`}
+                  title={isOdooHistoryOpen ? "Hide History Panel" : "Show History Panel"}
+                >
+                  {isOdooHistoryOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
+                </button>
+
+                <button
                   onClick={() => setShowOdooConfigModal(true)}
                   className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition border border-slate-200"
                   title="Configure Odoo Credentials"
@@ -2067,269 +2117,368 @@ export default function CustomerBotStudio() {
             )}
           </div>
 
-          {/* Central Hero: Clean "Ask Anything" Search Bar */}
-          <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-3.5">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleOdooQuery();
-              }}
-              className="relative"
-            >
-              <div className="relative flex items-center">
-                <div className="absolute left-4 text-purple-600 pointer-events-none">
-                  <Search className="w-5 h-5" />
+          {/* Main 2-Column Chatter Studio: Left History Panel + Center Continuous Stream */}
+          <div className="flex flex-col lg:flex-row gap-5 items-start">
+
+            {/* ══ LEFT HISTORY PANEL ════════════════════════════════ */}
+            {isOdooHistoryOpen && (
+              <div className="w-full lg:w-72 bg-white rounded-3xl border border-slate-200/90 shadow-sm p-4 space-y-3 shrink-0">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-purple-700" />
+                    <span className="font-bold text-slate-800 text-xs">Query History</span>
+                  </div>
+                  {odooChatHistory.length > 0 && (
+                    <button
+                      onClick={() => {
+                        if (confirm("Clear all past queries?")) {
+                          setOdooChatHistory([]);
+                          setOdooReport(null);
+                          safeStorage.removeItem("maz_odoo_chat_history");
+                        }
+                      }}
+                      title="Clear history"
+                      className="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ask anything about your Odoo ERP (e.g., 'Who applied for internships?', 'Show top leads', 'List customer contacts')..."
-                  value={odooQuestion}
-                  onChange={(e) => setOdooQuestion(e.target.value)}
-                  className="w-full pl-12 pr-28 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 text-slate-900 placeholder:text-slate-400 text-xs font-medium transition"
-                />
-                <div className="absolute right-1.5 flex items-center">
-                  <button
-                    type="submit"
-                    disabled={isQueryingOdoo || !odooQuestion.trim()}
-                    className="px-4 py-2 bg-gradient-to-r from-purple-700 to-fuchsia-700 hover:from-purple-800 hover:to-purple-900 text-white rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-md shadow-purple-900/20 disabled:opacity-50"
-                  >
-                    {isQueryingOdoo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                    <span>{isQueryingOdoo ? "Querying..." : "Ask AI"}</span>
-                  </button>
+
+                <button
+                  onClick={() => {
+                    setOdooReport(null);
+                    setOdooQuestion("");
+                  }}
+                  className="w-full py-2 px-3 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 font-bold text-xs flex items-center justify-center gap-1.5 transition border border-purple-200/60 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Query</span>
+                </button>
+
+                <div className="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
+                  {odooChatHistory.map((item, idx) => (
+                    <button
+                      key={item.id || idx}
+                      onClick={() => {
+                        setOdooReport(item.report);
+                        const el = document.getElementById(item.id);
+                        el?.scrollIntoView({ behavior: "smooth" });
+                      }}
+                      className={`w-full text-left p-2.5 rounded-xl border text-xs transition cursor-pointer group ${
+                        odooReport === item.report
+                          ? "bg-purple-50 border-purple-300 text-purple-900 font-bold shadow-2xs"
+                          : "bg-slate-50/70 border-slate-200/70 hover:bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      <div className="truncate font-medium">{item.question}</div>
+                      <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
+                        <span>{item.timestamp}</span>
+                        {item.report?.total_found !== undefined && (
+                          <span className="px-1.5 py-0.2 rounded bg-purple-100 text-purple-700 font-semibold">
+                            {item.report.total_found} recs
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+
+                  {odooChatHistory.length === 0 && (
+                    <div className="p-4 text-center text-slate-400 text-xs">
+                      No query history yet.
+                    </div>
+                  )}
                 </div>
               </div>
-            </form>
+            )}
 
-            {/* Clean Prompt Chips */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-              <span className="text-[11px] font-semibold text-slate-400 mr-1">Suggested:</span>
-              {[
-                { label: "🎓 Internship & Job Applications", q: "Who applied for jobs or internships recently?" },
-                { label: "👥 Recent CRM Leads", q: "Show recent CRM leads with email and phone" },
-                { label: "🏢 Contacts & Partners", q: "List all contacts in our Odoo database" },
-                { label: "📑 Sales Orders & Quotations", q: "Show all sales orders and quotations" },
-              ].map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => {
-                    setOdooQuestion(item.q);
-                    handleOdooQuery(item.q);
+            {/* ══ RIGHT CENTER CHATTER STREAM ══════════════════════ */}
+            <div className="flex-1 w-full space-y-5">
+              
+              {/* Central Search Bar */}
+              <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-3.5">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleOdooQuery();
                   }}
-                  className="px-3 py-1 rounded-full bg-slate-100 hover:bg-purple-100 hover:text-purple-900 text-slate-600 text-[11px] font-medium transition flex items-center gap-1 border border-slate-200/60"
+                  className="relative"
                 >
-                  {item.label}
-                </button>
-              ))}
+                  <div className="relative flex items-center">
+                    <div className="absolute left-4 text-purple-600 pointer-events-none">
+                      <Search className="w-5 h-5" />
+                    </div>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ask anything about your Odoo ERP (e.g., 'Who applied for internships?', 'Show top leads', 'List customer contacts')..."
+                      value={odooQuestion}
+                      onChange={(e) => setOdooQuestion(e.target.value)}
+                      className="w-full pl-12 pr-28 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:bg-white focus:border-purple-600 focus:ring-4 focus:ring-purple-600/10 text-slate-900 placeholder:text-slate-400 text-xs font-medium transition"
+                    />
+                    <div className="absolute right-1.5 flex items-center">
+                      <button
+                        type="submit"
+                        disabled={isQueryingOdoo || !odooQuestion.trim()}
+                        className="px-4 py-2 bg-gradient-to-r from-purple-700 to-fuchsia-700 hover:from-purple-800 hover:to-purple-900 text-white rounded-xl font-bold text-xs transition flex items-center gap-1.5 shadow-md shadow-purple-900/20 disabled:opacity-50 cursor-pointer"
+                      >
+                        {isQueryingOdoo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                        <span>{isQueryingOdoo ? "Querying..." : "Ask AI"}</span>
+                      </button>
+                    </div>
+                  </div>
+                </form>
+
+                {/* Clean Prompt Chips */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <span className="text-[11px] font-semibold text-slate-400 mr-1">Suggested:</span>
+                  {[
+                    { label: "🎓 Internship & Job Applications", q: "Who applied for jobs or internships recently?" },
+                    { label: "👥 Recent CRM Leads", q: "Show recent CRM leads with email and phone" },
+                    { label: "🏢 Contacts & Partners", q: "List all contacts in our Odoo database" },
+                    { label: "📑 Sales Orders & Quotations", q: "Show all sales orders and quotations" },
+                    { label: "💰 Overdue Invoices & Bills", q: "What are our unpaid overdue invoices?" },
+                    { label: "📦 Inventory & Stock", q: "Which products have the lowest stock levels?" },
+                  ].map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => {
+                        setOdooQuestion(item.q);
+                        handleOdooQuery(item.q);
+                      }}
+                      className="px-3 py-1 rounded-full bg-slate-100 hover:bg-purple-100 hover:text-purple-900 text-slate-600 text-[11px] font-medium transition flex items-center gap-1 border border-slate-200/60 cursor-pointer"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Error Banner */}
+              {odooError && (
+                <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl flex items-center justify-between gap-3 animate-fade-up">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                    <span className="font-medium">{odooError}</span>
+                  </div>
+                  <button
+                    onClick={() => setOdooError(null)}
+                    className="text-xs text-rose-500 hover:text-rose-800 font-bold px-2 py-1 rounded"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              )}
+
+              {/* Continuous Stream of Past Interactions */}
+              {odooChatHistory.map((item) => {
+                const rep = item.report;
+                if (!rep) return null;
+                return (
+                  <div key={item.id} id={item.id} className="space-y-3 pt-2">
+                    {/* User Question Pill */}
+                    <div className="flex justify-end">
+                      <div className="max-w-xl bg-gradient-to-r from-purple-700 to-fuchsia-700 text-white px-4 py-3 rounded-2xl rounded-tr-xs shadow-sm text-xs leading-relaxed font-medium">
+                        {item.question}
+                        <div className="text-[10px] text-purple-200/80 text-right mt-1 font-mono">
+                          {item.timestamp}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Executive Assistant Card */}
+                    <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden space-y-5 p-6 sm:p-7 animate-fade-up">
+                      {/* Report Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
+                              Model: {rep.model}
+                            </span>
+                            {rep.period && rep.period !== "All time" && (
+                              <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 capitalize">
+                                Period: {rep.period}
+                              </span>
+                            )}
+                            {rep.total_amount && (
+                              <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
+                                Total Sum: {Number(rep.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            )}
+                            <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
+                              <Check className="w-3 h-3" /> Live XML-RPC
+                            </span>
+                            <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200 flex items-center gap-1">
+                              <Sparkles className="w-3 h-3 text-purple-600" /> Gemini 3.8 Flash
+                            </span>
+                          </div>
+                          <h3 className="text-base font-bold text-slate-900 mt-2">
+                            {rep.model_label} (
+                            {(rep.total_found ?? rep.records?.length ?? 0).toLocaleString()} Total Records
+                            {rep.records && rep.records.length > 0 && !rep.is_count_only
+                              ? rep.is_grouped
+                                ? `, ${rep.records.length} Breakdown Rows`
+                                : `, Showing ${rep.records.length}`
+                              : ""}
+                            )
+                          </h3>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            onClick={() => handleExportExcel(rep)}
+                            title="Export as professional Excel (.xlsx) workbook"
+                            className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                          >
+                            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                            Excel
+                          </button>
+
+                          <button
+                            onClick={() => handleExportPDF(rep)}
+                            title="Print or Save clean Executive PDF Report"
+                            className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+                          >
+                            <Download className="w-3.5 h-3.5 text-blue-600" />
+                            PDF
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setOdooReport(rep);
+                              setIsWhatsAppModalOpen(true);
+                            }}
+                            title="Send query report to WhatsApp via Meta Cloud API or direct link"
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-emerald-600/20 cursor-pointer"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                            WhatsApp
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Direct Specific Answer Card */}
+                      {rep.direct_answer && (
+                        <div className="p-5 bg-gradient-to-r from-purple-50/90 via-fuchsia-50/50 to-purple-50/80 rounded-2xl border border-purple-200/90 shadow-sm space-y-2.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 text-purple-900 font-extrabold text-xs">
+                              <span className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center text-xs shadow-sm">
+                                <Sparkles className="w-3.5 h-3.5" />
+                              </span>
+                              <span>Direct Answer:</span>
+                            </div>
+                            <span className="text-[10px] font-semibold text-purple-700 bg-purple-100/90 px-2.5 py-0.5 rounded-full border border-purple-200 flex items-center gap-1 shadow-xs">
+                              <Sparkles className="w-3 h-3 text-purple-600" /> Powered by MAZ AI
+                            </span>
+                          </div>
+                          <div className="text-slate-800 text-xs leading-relaxed font-medium pl-8 space-y-1.5">
+                            {renderDirectAnswer(rep.direct_answer)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* AI Key Insights Box */}
+                      {rep.insights && rep.insights.length > 0 && !rep.direct_answer && (
+                        <div className="p-4 bg-purple-50/60 rounded-2xl border border-purple-100 space-y-2">
+                          <div className="font-bold text-purple-900 text-xs flex items-center gap-1.5">
+                            <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Executive Summary:
+                          </div>
+                          <div className="space-y-1.5">
+                            {rep.insights.map((ins: string, idx: number) => (
+                              <div key={idx} className="text-slate-700 text-xs flex items-start gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-1.5 shrink-0" />
+                                <span dangerouslySetInnerHTML={{ __html: ins.replace(/\*\*(.*?)\*\*/g, '<strong className="text-purple-950 font-bold">$1</strong>') }} />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Data Table */}
+                      {!rep.is_count_only && rep.records && rep.records.length > 0 ? (
+                        <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-inner">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider">
+                              <tr>
+                                {Object.keys(rep.records[0]).map((col) => (
+                                  <th key={col} className="py-3 px-4 capitalize whitespace-nowrap">
+                                    {col.replace(/_/g, " ")}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {rep.records.map((row: any, rIdx: number) => (
+                                <tr key={rIdx} className="hover:bg-purple-50/30 transition">
+                                  {Object.values(row).map((val: any, cIdx: number) => (
+                                    <td key={cIdx} className="py-3 px-4 font-medium text-slate-800 whitespace-nowrap">
+                                      {val === null || val === false || val === "" ? (
+                                        <span className="text-slate-300">-</span>
+                                      ) : (
+                                        String(val)
+                                      )}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : !rep.is_count_only ? (
+                        <div className="p-8 text-center text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                          No matching records found in this Odoo model for your search.
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Loading State */}
+              {isQueryingOdoo && (
+                <div className="bg-white rounded-3xl border border-slate-200/90 p-8 shadow-sm text-center space-y-3 animate-pulse">
+                  <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 mx-auto flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-800">
+                    Odoo AI Analyst is querying your ERP database via Gemini 3.8 Flash...
+                  </h3>
+                  <p className="text-slate-400 text-xs max-w-md mx-auto">
+                    Translating question to XML-RPC domain filters, querying live models, and formulating direct answer.
+                  </p>
+                </div>
+              )}
+
+              {/* Clean Initial Hero State when no queries yet */}
+              {odooChatHistory.length === 0 && !isQueryingOdoo && (
+                <div className="bg-white rounded-3xl border border-slate-200/90 p-8 sm:p-10 text-center space-y-4 shadow-sm">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 to-fuchsia-600 text-white mx-auto flex items-center justify-center shadow-lg shadow-purple-600/20">
+                    <Bot className="w-7 h-7" />
+                  </div>
+                  <div className="space-y-1 max-w-md mx-auto">
+                    <h3 className="text-base font-black text-slate-900">Direct Natural Language ERP Gateway</h3>
+                    <p className="text-slate-500 text-xs">
+                      Ask any question above or choose a suggested prompt to query your live Odoo models and generate instant executive reports.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-3 pt-2">
+                    <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" /> Real-Time XML-RPC
+                    </div>
+                    <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" /> Multi-Tenant Isolated
+                    </div>
+                    <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium flex items-center gap-1.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600" /> Instant AI Summaries
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={odooMessagesEndRef} />
             </div>
           </div>
-
-          {/* Error Banner */}
-          {odooError && (
-            <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl flex items-center justify-between gap-3 animate-fade-up">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                <span className="font-medium">{odooError}</span>
-              </div>
-              <button
-                onClick={() => setOdooError(null)}
-                className="text-xs text-rose-500 hover:text-rose-800 font-bold px-2 py-1 rounded"
-              >
-                Dismiss
-              </button>
-            </div>
-          )}
-
-          {/* Loading State */}
-          {isQueryingOdoo && (
-            <div className="bg-white rounded-3xl border border-slate-200/90 p-8 shadow-sm text-center space-y-3 animate-pulse">
-              <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 mx-auto flex items-center justify-center">
-                <Loader2 className="w-6 h-6 animate-spin" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-800">Odoo AI Analyst is querying your ERP database...</h3>
-              <p className="text-slate-400 text-xs max-w-md mx-auto">
-                Translating question to XML-RPC domain filters, querying live models, and synthesizing executive insights.
-              </p>
-            </div>
-          )}
-
-          {/* Generated Report Result */}
-          {odooReport && !isQueryingOdoo && (
-            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm overflow-hidden space-y-5 p-6 sm:p-7 animate-fade-up">
-              {/* Report Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 px-2.5 py-0.5 rounded-full border border-purple-200">
-                      Model: {odooReport.model}
-                    </span>
-                    {odooReport.period && odooReport.period !== "All time" && (
-                      <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200 capitalize">
-                        Period: {odooReport.period}
-                      </span>
-                    )}
-                    {odooReport.total_amount && (
-                      <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                        Total Sum: {odooReport.total_amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    )}
-                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Live XML-RPC
-                    </span>
-                  </div>
-                  <h3 className="text-base font-bold text-slate-900 mt-2">
-                    {odooReport.model_label} (
-                    {(odooReport.total_found ?? odooReport.records?.length ?? 0).toLocaleString()} Total Records
-                    {odooReport.records && odooReport.records.length > 0 && !odooReport.is_count_only
-                      ? odooReport.is_grouped
-                        ? `, ${odooReport.records.length} Breakdown Rows`
-                        : `, Showing ${odooReport.records.length}`
-                      : ""}
-                    )
-                  </h3>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={handleExportExcel}
-                    title="Export as professional Excel (.xlsx) workbook"
-                    className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200/80 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                    Excel
-                  </button>
-
-                  <button
-                    onClick={handleExportPDF}
-                    title="Print or Save clean Executive PDF Report"
-                    className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200/80 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
-                  >
-                    <Download className="w-3.5 h-3.5 text-blue-600" />
-                    PDF
-                  </button>
-
-                  <button
-                    onClick={() => setIsWhatsAppModalOpen(true)}
-                    title="Send query report to WhatsApp via Meta Cloud API or direct link"
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-emerald-600/20"
-                  >
-                    <Share2 className="w-3.5 h-3.5" />
-                    WhatsApp
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      setOdooReport(null);
-                      setOdooQuestion("");
-                    }}
-                    className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-
-              {/* Direct Specific Answer Card */}
-              {odooReport.direct_answer && (
-                <div className="p-5 bg-gradient-to-r from-purple-50/90 via-fuchsia-50/50 to-purple-50/80 rounded-2xl border border-purple-200/90 shadow-sm space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-purple-900 font-extrabold text-xs">
-                      <span className="w-6 h-6 rounded-lg bg-purple-600 text-white flex items-center justify-center text-xs shadow-sm">
-                        <Sparkles className="w-3.5 h-3.5" />
-                      </span>
-                      <span>Direct Answer:</span>
-                    </div>
-                    <span className="text-[10px] font-semibold text-purple-700 bg-purple-100/90 px-2.5 py-0.5 rounded-full border border-purple-200 flex items-center gap-1 shadow-xs">
-                      <Sparkles className="w-3 h-3 text-purple-600" /> Powered by MAZ AI
-                    </span>
-                  </div>
-                  <div className="text-slate-800 text-xs leading-relaxed font-medium pl-8 space-y-1.5">
-                    {renderDirectAnswer(odooReport.direct_answer)}
-                  </div>
-                </div>
-              )}
-
-              {/* AI Key Insights Box */}
-              {odooReport.insights && odooReport.insights.length > 0 && !odooReport.direct_answer && (
-                <div className="p-4 bg-purple-50/60 rounded-2xl border border-purple-100 space-y-2">
-                  <div className="font-bold text-purple-900 text-xs flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-purple-600" /> Executive Summary:
-                  </div>
-                  <div className="space-y-1.5">
-                    {odooReport.insights.map((ins: string, idx: number) => (
-                      <div key={idx} className="text-slate-700 text-xs flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-600 mt-1.5 shrink-0" />
-                        <span dangerouslySetInnerHTML={{ __html: ins.replace(/\*\*(.*?)\*\*/g, '<strong className="text-purple-950 font-bold">$1</strong>') }} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Data Table (Only rendered when detailed records are requested, hidden for count-only queries) */}
-              {!odooReport.is_count_only && odooReport.records && odooReport.records.length > 0 ? (
-                <div className="overflow-x-auto rounded-2xl border border-slate-200 shadow-inner">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase text-[10px] tracking-wider">
-                      <tr>
-                        {Object.keys(odooReport.records[0]).map((col) => (
-                          <th key={col} className="py-3 px-4 capitalize whitespace-nowrap">
-                            {col.replace(/_/g, ' ')}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {odooReport.records.map((row: any, rIdx: number) => (
-                        <tr key={rIdx} className="hover:bg-purple-50/30 transition">
-                          {Object.values(row).map((val: any, cIdx: number) => (
-                            <td key={cIdx} className="py-3 px-4 font-medium text-slate-800 whitespace-nowrap">
-                              {val === null || val === false || val === "" ? (
-                                <span className="text-slate-300">-</span>
-                              ) : (
-                                String(val)
-                              )}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : !odooReport.is_count_only ? (
-                <div className="p-8 text-center text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
-                  No matching records found in this Odoo model for your search.
-                </div>
-              ) : null}
-            </div>
-          )}
-
-          {/* Clean Initial Hero State when no report yet */}
-          {!odooReport && !isQueryingOdoo && (
-            <div className="bg-white rounded-3xl border border-slate-200/90 p-8 sm:p-10 text-center space-y-4 shadow-sm">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 to-fuchsia-600 text-white mx-auto flex items-center justify-center shadow-lg shadow-purple-600/20">
-                <Bot className="w-7 h-7" />
-              </div>
-              <div className="space-y-1 max-w-md mx-auto">
-                <h3 className="text-base font-black text-slate-900">Direct Natural Language ERP Gateway</h3>
-                <p className="text-slate-500 text-xs">
-                  Ask any question above or choose a suggested prompt to query your live Odoo models and generate instant executive reports.
-                </p>
-              </div>
-              <div className="flex flex-wrap justify-center gap-3 pt-2">
-                <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-emerald-600" /> Real-Time XML-RPC
-                </div>
-                <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-emerald-600" /> Multi-Tenant Isolated
-                </div>
-                <div className="px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-[11px] font-medium flex items-center gap-1.5">
-                  <Check className="w-3.5 h-3.5 text-emerald-600" /> Instant AI Summaries
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
 

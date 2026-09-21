@@ -50,6 +50,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "https://ai.maifelz.com",
   },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/favicon.ico",
+  },
 };
 
 const jsonLd = {
