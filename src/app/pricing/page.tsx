@@ -1,264 +1,309 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { 
   Check, Sparkles, ArrowRight, Bot, 
-  HelpCircle, MessageSquare, Database, ShieldCheck, Flame
+  HelpCircle, MessageSquare, Database, ShieldCheck, Flame, BarChart3
 } from "lucide-react";
 
 export default function PricingPage() {
+  const [isAnnual, setIsAnnual] = useState(true);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-purple-50/30 text-slate-900 py-14 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
       {/* Background Ambient Glows */}
       <div className="absolute top-10 left-1/4 w-96 h-96 bg-purple-200/40 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute top-1/2 right-10 w-96 h-96 bg-fuchsia-100/50 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="max-w-5xl mx-auto relative z-10">
+      <div className="max-w-6xl mx-auto relative z-10">
         
         {/* Header Section */}
-        <div className="text-center max-w-2xl mx-auto mb-12">
+        <div className="text-center max-w-3xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 mb-4 shadow-sm">
             <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-            Simple, Transparent Pricing
+            Simple, Transparent, Ultra-Affordable Pricing
           </div>
           
           <h1 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight mb-4 leading-tight">
-            High-Performance AI for <br />
+            Enterprise AI Power for <br />
             <span className="bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-900 bg-clip-text text-transparent">
-              Your Business Website.
+              Every Growing Business.
             </span>
           </h1>
 
-          <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-            Deploy an autonomous AI agent trained on your company knowledge. 
-            Enjoy unlimited conversations with zero message limits and native Odoo ERP CRM integration.
+          <p className="text-slate-600 text-sm sm:text-base leading-relaxed mb-8">
+            Select standalone AI Customer Support, Conversational Odoo ERP Analytics, or combine both for full operational automation.
           </p>
+
+          {/* Billing Cycle Toggle */}
+          <div className="inline-flex items-center gap-3 p-1.5 rounded-full bg-slate-100 border border-slate-200 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setIsAnnual(false)}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                !isAnnual
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Monthly Billing
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAnnual(true)}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 ${
+                isAnnual
+                  ? "bg-purple-700 text-white shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <span>Yearly Billing</span>
+              <span className="bg-emerald-400 text-emerald-950 text-[10px] font-black px-1.5 py-0.2 rounded-full uppercase">
+                Save ~17%
+              </span>
+            </button>
+          </div>
         </div>
 
-        {/* 2-Card Simple Pricing Grid (3Beeez Inspired) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-16">
+        {/* 3-Card Modular Pricing Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto mb-16">
           
-          {/* MONTHLY CARD */}
-          <div className="bg-white rounded-3xl p-8 border-2 border-purple-600 shadow-xl shadow-purple-900/5 relative flex flex-col justify-between hover:shadow-2xl transition duration-300">
-            <div className="absolute -top-3.5 left-8 bg-gradient-to-r from-purple-700 to-fuchsia-700 text-white text-[11px] font-bold uppercase tracking-wider px-3.5 py-1 rounded-full shadow-md">
-              Most Popular
-            </div>
-
+          {/* CARD 1: CHATBOT ONLY */}
+          <div className="bg-white rounded-3xl p-7 border border-slate-200 shadow-lg hover:shadow-xl transition duration-300 flex flex-col justify-between relative">
             <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-purple-700 mb-2">Monthly Plan</div>
-              <div className="flex items-baseline gap-1 mb-3">
-                <span className="text-5xl font-black text-slate-900">$35</span>
-                <span className="text-slate-500 font-semibold text-sm">/ month</span>
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 font-bold">
+                <Bot className="w-5 h-5" />
               </div>
+              <div className="text-xs font-bold uppercase tracking-wider text-blue-700 mb-1">AI Chatbot Only</div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Customer Service &amp; Leads</h3>
+              
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-black text-slate-900">{isAnnual ? "$100" : "$10"}</span>
+                <span className="text-slate-500 font-semibold text-xs">/ {isAnnual ? "year" : "month"}</span>
+              </div>
+              {isAnnual && (
+                <div className="text-[11px] font-semibold text-emerald-600 mb-4">
+                  Equivalent to just $8.33 / month (2 months free!)
+                </div>
+              )}
+              {!isAnnual && (
+                <div className="text-[11px] text-slate-400 mb-4">Billed monthly. Cancel anytime.</div>
+              )}
+
               <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-                Full platform access with unlimited messages and real-time knowledge grounding.
+                Autonomous 24/7 customer support widget trained on your PDFs, website links, and company knowledge.
               </p>
 
-              <div className="space-y-3.5 pt-4 border-t border-slate-100 text-xs text-slate-700">
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="font-semibold text-slate-900">Unlimited conversations &amp; messages</span>
+              <div className="space-y-3 pt-4 border-t border-slate-100 text-xs text-slate-700">
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span className="font-semibold text-slate-900">Unlimited conversations</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span>1 AI Chatbot for your website</span>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>1-line embed script (<code className="text-[11px]">maz.js</code>)</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span>Upload PDFs, Word docs, webpages &amp; text notes</span>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>Sub-second streaming RAG</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="font-semibold text-slate-900">Admin portal with full conversation history</span>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>Interactive Lead Capture Card</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span>One-tag embed — works on any website or CMS</span>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>Custom brand colors &amp; avatar</span>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="font-semibold text-purple-700">Native Odoo ERP CRM sync included</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-purple-50 text-purple-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span>Real-time BANT lead capture &amp; scoring</span>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-blue-600 shrink-0" />
+                  <span>Full conversation transcript logs</span>
                 </div>
               </div>
             </div>
 
             <div className="mt-8">
               <Link
-                href="/?plan=monthly"
+                href="/login?service=chatbot"
+                className="w-full py-3 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition flex items-center justify-center gap-2 shadow-md"
+              >
+                Get Started <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* CARD 2: ODOO ERP ANALYTICS ONLY */}
+          <div className="bg-white rounded-3xl p-7 border border-slate-200 shadow-lg hover:shadow-xl transition duration-300 flex flex-col justify-between relative">
+            <div>
+              <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4 font-bold">
+                <BarChart3 className="w-5 h-5" />
+              </div>
+              <div className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-1">Odoo Analytics Only</div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Conversational ERP Gateway</h3>
+              
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-black text-slate-900">{isAnnual ? "$100" : "$10"}</span>
+                <span className="text-slate-500 font-semibold text-xs">/ {isAnnual ? "year" : "month"}</span>
+              </div>
+              {isAnnual && (
+                <div className="text-[11px] font-semibold text-emerald-600 mb-4">
+                  Equivalent to just $8.33 / month (2 months free!)
+                </div>
+              )}
+              {!isAnnual && (
+                <div className="text-[11px] text-slate-400 mb-4">Billed monthly. Cancel anytime.</div>
+              )}
+
+              <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+                Direct natural language queries into your live Odoo ERP with instant charts, Excel/PDF downloads, and WhatsApp alerts.
+              </p>
+
+              <div className="space-y-3 pt-4 border-t border-slate-100 text-xs text-slate-700">
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="font-semibold text-slate-900">Plain English ERP Queries</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Real-time Odoo ORM execution</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Automated Chart &amp; Metric Generation</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>1-Click Excel &amp; PDF Export</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>WhatsApp Report Dispatch</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Zero SQL schema leakage guardrails</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <Link
+                href="/login?service=odoo"
+                className="w-full py-3 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition flex items-center justify-center gap-2 shadow-md"
+              >
+                Get Started <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* CARD 3: FULL SUITE (CHATBOT + ODOO ERP) - FEATURED */}
+          <div className="bg-white rounded-3xl p-7 border-2 border-purple-600 shadow-xl shadow-purple-900/10 relative flex flex-col justify-between hover:shadow-2xl transition duration-300 ring-2 ring-purple-500/20">
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-purple-700 to-fuchsia-700 text-white text-[11px] font-bold uppercase tracking-wider px-4 py-1 rounded-full shadow-md whitespace-nowrap">
+              💎 Best Value • Full Suite
+            </div>
+
+            <div>
+              <div className="w-10 h-10 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center mb-4 font-bold">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div className="text-xs font-bold uppercase tracking-wider text-purple-700 mb-1">Chatbot + Odoo ERP</div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Complete Enterprise Suite</h3>
+              
+              <div className="flex items-baseline gap-1 mb-2">
+                <span className="text-4xl font-black text-purple-900">{isAnnual ? "$150" : "$15"}</span>
+                <span className="text-slate-500 font-semibold text-xs">/ {isAnnual ? "year" : "month"}</span>
+              </div>
+              {isAnnual && (
+                <div className="text-[11px] font-semibold text-emerald-600 mb-4">
+                  Equivalent to just $12.50 / month (Save $30/yr!)
+                </div>
+              )}
+              {!isAnnual && (
+                <div className="text-[11px] text-slate-400 mb-4">Billed monthly. Save 2 months with annual.</div>
+              )}
+
+              <p className="text-xs text-slate-500 mb-6 leading-relaxed">
+                Both powerful engines unified: 24/7 Website AI Chatbot + Live Odoo ERP Analytics &amp; WhatsApp Reports.
+              </p>
+
+              <div className="space-y-3 pt-4 border-t border-purple-100 text-xs text-slate-700">
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-purple-700 shrink-0 font-bold" />
+                  <span className="font-bold text-slate-900">EVERYTHING in AI Chatbot</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-purple-700 shrink-0 font-bold" />
+                  <span className="font-bold text-slate-900">EVERYTHING in Odoo Analytics</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-purple-700 shrink-0" />
+                  <span className="font-semibold text-purple-800">Bi-directional CRM Lead Sync</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-purple-700 shrink-0" />
+                  <span>Automated WhatsApp CRM Dispatch</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-purple-700 shrink-0" />
+                  <span>Priority 24/7 SLA Support</span>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Check className="w-4 h-4 text-purple-700 shrink-0" />
+                  <span>Official Odoo Partner Implementation Help</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-8">
+              <Link
+                href="/login?service=full"
                 className="w-full py-3.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-800 hover:from-purple-800 hover:to-purple-900 text-white transition flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20"
               >
-                Get Started with Monthly <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          </div>
-
-          {/* ANNUAL CARD */}
-          <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-lg hover:shadow-xl transition duration-300 flex flex-col justify-between relative">
-            <div className="absolute -top-3.5 right-8 bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-wider px-3.5 py-1 rounded-full shadow-md">
-              Save $70 (2 Months Free)
-            </div>
-
-            <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Annual Plan</div>
-              <div className="flex items-baseline gap-1 mb-3">
-                <span className="text-5xl font-black text-slate-900">$350</span>
-                <span className="text-slate-500 font-semibold text-sm">/ year</span>
-              </div>
-              <p className="text-xs text-slate-500 mb-6 leading-relaxed">
-                Same complete access with a yearly discount — save $70 versus paying month-to-month.
-              </p>
-
-              <div className="space-y-3.5 pt-4 border-t border-slate-100 text-xs text-slate-700">
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="font-semibold text-slate-900">Unlimited conversations &amp; messages</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span>1 AI Chatbot for your website</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span>Upload PDFs, Word docs, webpages &amp; text notes</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="font-semibold text-slate-900">Admin portal with full conversation history</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span>One-tag embed — works on any website or CMS</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span className="font-semibold text-purple-700">Native Odoo ERP CRM sync included</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-5 h-5 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
-                    <Check className="w-3.5 h-3.5" />
-                  </div>
-                  <span>Real-time BANT lead capture &amp; scoring</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8">
-              <Link
-                href="/?plan=annual"
-                className="w-full py-3.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition flex items-center justify-center gap-2 shadow-md"
-              >
-                Choose Annual Plan <ArrowRight className="w-4 h-4" />
+                Get Full Suite <ArrowRight className="w-4 h-4" />
               </Link>
             </div>
           </div>
 
         </div>
 
-        {/* Feature Highlights Grid */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 border border-slate-200 shadow-sm max-w-4xl mx-auto mb-16">
-          <div className="text-center mb-8">
-            <h2 className="text-xl font-bold text-slate-900">Everything Included in Your Subscription</h2>
-            <p className="text-xs text-slate-500 mt-1">Enterprise-grade autonomous AI infrastructure built for real business conversion.</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-xs">
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center mb-3">
-                <Database className="w-4 h-4" />
-              </div>
-              <h3 className="font-bold text-slate-900 mb-1">RAG Knowledge Engine</h3>
-              <p className="text-slate-500 leading-relaxed">
-                Indexes your PDFs, brochures, URLs, and custom text notes with sub-second hybrid retrieval.
-              </p>
+        {/* Feature Comparison Table / Highlights */}
+        <div className="bg-white rounded-3xl p-8 border border-slate-200/90 shadow-sm max-w-4xl mx-auto mb-16">
+          <h3 className="text-lg font-bold text-slate-900 mb-6 text-center">Frequently Asked Questions</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs leading-relaxed text-slate-600">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+              <h4 className="font-bold text-slate-800 mb-1.5 text-sm">Can I start with only the Chatbot?</h4>
+              <p>Yes! Our pricing is completely modular. You can start with only the AI Chatbot at $10/month, and upgrade to include Odoo ERP Analytics anytime with zero setup fees.</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-3">
-                <Flame className="w-4 h-4" />
-              </div>
-              <h3 className="font-bold text-slate-900 mb-1">Odoo CRM Sync</h3>
-              <p className="text-slate-500 leading-relaxed">
-                Qualified visitor leads and conversation transcripts are automatically pushed to your Odoo pipeline.
-              </p>
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+              <h4 className="font-bold text-slate-800 mb-1.5 text-sm">How does the Odoo Analytics connect safely?</h4>
+              <p>MAZ uses read-only ORM connections and never executes destructive SQL. All queries are strictly sanitized, and customer data never leaves your isolated environment.</p>
             </div>
 
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
-              <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-3">
-                <MessageSquare className="w-4 h-4" />
-              </div>
-              <h3 className="font-bold text-slate-900 mb-1">Full Conversation Logs</h3>
-              <p className="text-slate-500 leading-relaxed">
-                Inspect every question your customers asked to continuously refine and train your AI knowledge base.
-              </p>
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+              <h4 className="font-bold text-slate-800 mb-1.5 text-sm">How do I embed the chatbot on my site?</h4>
+              <p>Copy one simple line of code into your WordPress, Shopify, Next.js, or HTML site. It works immediately and is fully optimized for iOS Safari and mobile phones.</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+              <h4 className="font-bold text-slate-800 mb-1.5 text-sm">What payment methods are supported?</h4>
+              <p>We support all major international credit/debit cards, Stripe, and corporate invoicing for annual subscriptions.</p>
             </div>
           </div>
         </div>
 
-        {/* FAQs */}
-        <div className="max-w-2xl mx-auto">
-          <h2 className="text-xl font-bold text-slate-900 text-center mb-6">Frequently Asked Questions</h2>
-          <div className="space-y-4 text-xs">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <h4 className="font-bold text-slate-900 mb-1.5 flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-purple-600 shrink-0" />
-                Are there really no message limits?
-              </h4>
-              <p className="text-slate-600 leading-relaxed pl-6">
-                Yes! Both our monthly and annual plans include unlimited conversations. Your website visitors can ask questions 24/7 without worrying about overage charges or sudden chatbot shutoffs.
-              </p>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <h4 className="font-bold text-slate-900 mb-1.5 flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-purple-600 shrink-0" />
-                How do I train the AI on my company details?
-              </h4>
-              <p className="text-slate-600 leading-relaxed pl-6">
-                You can upload PDFs, Word documents, crawl your website URLs, or directly paste text notes and FAQ answers in your Customer Studio. The AI learns new info immediately.
-              </p>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-              <h4 className="font-bold text-slate-900 mb-1.5 flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-purple-600 shrink-0" />
-                How does the Odoo ERP integration work?
-              </h4>
-              <p className="text-slate-600 leading-relaxed pl-6">
-                Our connector module receives webhook events whenever a customer submits their contact info or qualifies as a lead, creating a CRM Opportunity in Odoo with the full chat transcript.
-              </p>
-            </div>
-          </div>
+        {/* Bottom CTA */}
+        <div className="text-center">
+          <h3 className="text-xl font-bold text-slate-900 mb-2">Have specific enterprise requirements?</h3>
+          <p className="text-xs text-slate-500 mb-4">Our official Odoo Partner team can build custom OWL apps, integrations, and private LLM models.</p>
+          <a
+            href="mailto:contact@maifelz.com"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition"
+          >
+            Speak with an Enterprise Consultant
+          </a>
         </div>
 
       </div>
