@@ -95,7 +95,22 @@ export default function CustomerBotStudio() {
   const [odooError, setOdooError] = useState<string | null>(null);
   const [odooChatHistory, setOdooChatHistory] = useState<OdooChatMessage[]>([]);
   const [isOdooHistoryOpen, setIsOdooHistoryOpen] = useState(true);
+  const odooMessagesTopRef = useRef<HTMLDivElement>(null);
   const odooMessagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Tenant-scoped history key helper
+  const getOdooHistoryKey = (tenantId?: string) =>
+    tenantId ? `maz_odoo_chat_history_${tenantId}` : "maz_odoo_chat_history";
+
+  const handleClearOdooChat = () => {
+    if (confirm(`Clear all Odoo queries for ${tenantProfile?.company_name || "this organization"}?`)) {
+      setOdooChatHistory([]);
+      setOdooReport(null);
+      const key = getOdooHistoryKey(tenantProfile?.id);
+      safeStorage.removeItem(key);
+      safeStorage.removeItem("maz_odoo_chat_history");
+    }
+  };
 
   // WhatsApp Dispatch & Export States
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
@@ -110,20 +125,64 @@ export default function CustomerBotStudio() {
     if (typeof window !== "undefined") {
       setMetaPhoneNumberId(safeStorage.getItem("maz_meta_phone_id") || "");
       setMetaAccessToken(safeStorage.getItem("maz_meta_token") || "");
-      const savedHistory = safeStorage.getItem("maz_odoo_chat_history");
+    }
+  }, []);
+
+  // Synchronize Odoo Chat History & Credentials strictly per Tenant ID
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const tId = tenantProfile?.id;
+    if (tId) {
+      // 1. Load tenant-specific chat history
+      const historyKey = getOdooHistoryKey(tId);
+      const savedHistory = safeStorage.getItem(historyKey);
       if (savedHistory) {
         try {
           const parsed = JSON.parse(savedHistory);
           if (Array.isArray(parsed)) {
             setOdooChatHistory(parsed);
-            if (parsed.length > 0 && parsed[parsed.length - 1].report) {
-              setOdooReport(parsed[parsed.length - 1].report);
+            if (parsed.length > 0 && parsed[0]?.report) {
+              setOdooReport(parsed[0].report);
+            } else {
+              setOdooReport(null);
             }
           }
-        } catch (_) {}
+        } catch (_) {
+          setOdooChatHistory([]);
+          setOdooReport(null);
+        }
+      } else {
+        setOdooChatHistory([]);
+        setOdooReport(null);
+      }
+
+      // 2. Load tenant-specific Odoo gateway credentials
+      if (tenantProfile?.company_name?.toLowerCase().includes("maifelz")) {
+        setOdooUrl("https://maifelz-maifelz.odoo.com");
+        setOdooDb("maifelz-maifelz-maifelz-37525993");
+        setOdooUsername("fahad@maifelz.com");
+        setOdooApiKey("04474c6cbf27ffae05a5e4c85d7bbe4ad00df9cb");
+      } else {
+        const savedOdoo = safeStorage.getItem(`maz_odoo_creds_${tId}`);
+        if (savedOdoo) {
+          try {
+            const parsed = JSON.parse(savedOdoo);
+            setOdooUrl(parsed.url || "");
+            setOdooDb(parsed.db || "");
+            setOdooUsername(parsed.username || "");
+            setOdooApiKey(parsed.api_key || "");
+          } catch (e) {}
+        } else {
+          setOdooUrl("");
+          setOdooDb("");
+          setOdooUsername("");
+          setOdooApiKey("");
+          setOdooConnected(false);
+          setOdooMetrics(null);
+        }
       }
     }
-  }, []);
+  }, [tenantProfile?.id, tenantProfile?.company_name]);
 
   // Synchronize default tab with tenant service entitlements
   useEffect(() => {
@@ -446,13 +505,14 @@ export default function CustomerBotStudio() {
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       setOdooChatHistory(prev => {
-        const next = [...prev, newMsg];
-        safeStorage.setItem("maz_odoo_chat_history", JSON.stringify(next));
+        const next = [newMsg, ...prev]; // Latest query FIRST at the top
+        const key = getOdooHistoryKey(tenantProfile?.id);
+        safeStorage.setItem(key, JSON.stringify(next));
         return next;
       });
       setOdooQuestion("");
       setTimeout(() => {
-        odooMessagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+        odooMessagesTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
     } catch (err: any) {
       setOdooError(err.message || "Could not query Odoo");
@@ -2089,13 +2149,7 @@ export default function CustomerBotStudio() {
 
                 {odooChatHistory.length > 0 && (
                   <button
-                    onClick={() => {
-                      if (confirm("Clear chat stream and all query history?")) {
-                        setOdooChatHistory([]);
-                        setOdooReport(null);
-                        safeStorage.removeItem("maz_odoo_chat_history");
-                      }
-                    }}
+                    onClick={handleClearOdooChat}
                     className="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-bold text-[11px] transition flex items-center gap-1.5 shadow-xs cursor-pointer"
                     title="Clear Chatter Stream"
                   >
@@ -2147,13 +2201,7 @@ export default function CustomerBotStudio() {
                   </div>
                   {odooChatHistory.length > 0 && (
                     <button
-                      onClick={() => {
-                        if (confirm("Clear all past queries?")) {
-                          setOdooChatHistory([]);
-                          setOdooReport(null);
-                          safeStorage.removeItem("maz_odoo_chat_history");
-                        }
-                      }}
+                      onClick={handleClearOdooChat}
                       title="Clear history"
                       className="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer"
                     >
@@ -2298,13 +2346,7 @@ export default function CustomerBotStudio() {
                     </span>
                   </div>
                   <button
-                    onClick={() => {
-                      if (confirm("Clear all messages in this chatter stream?")) {
-                        setOdooChatHistory([]);
-                        setOdooReport(null);
-                        safeStorage.removeItem("maz_odoo_chat_history");
-                      }
-                    }}
+                    onClick={handleClearOdooChat}
                     className="px-2.5 py-1 text-slate-500 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
                     title="Clear current chatter conversation"
                   >
@@ -2314,7 +2356,9 @@ export default function CustomerBotStudio() {
                 </div>
               )}
 
-              {/* Continuous Stream of Past Interactions */}
+              <div ref={odooMessagesTopRef} />
+
+              {/* Continuous Stream of Past Interactions (Latest First) */}
               {odooChatHistory.map((item) => {
                 const rep = item.report;
                 if (!rep) return null;
