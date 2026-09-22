@@ -64,14 +64,22 @@
     }
 
     let botConfig = {
-      brand_title: "Maifelz Support",
-      brand_subtitle: "Official Odoo Partner & AI 24/7",
+      brand_title: "AI Support",
+      brand_subtitle: "Online & Ready to Help 24/7",
       brand_color: "#831843",
-      welcome_message: "👋 Welcome to Maifelz! How can I assist with your Odoo ERP implementation, custom AI solutions, or integrations today?",
-      placeholder_text: "Ask about Odoo, AI agents, or pricing...",
-      suggested_chips: ["Xero Integration", "Odoo Implementation", "WhatsApp CRM", "Book a Free Consultation"],
+      welcome_message: "👋 Welcome! How can I assist you today?",
+      placeholder_text: "Ask a question...",
+      suggested_chips: [],
       escalation_message: "Would you like our specialist to connect with you directly?"
     };
+
+    if (botId === "maz_maifelz_live") {
+      botConfig.brand_title = "Maifelz Support";
+      botConfig.brand_subtitle = "Official Odoo Partner & AI 24/7";
+      botConfig.welcome_message = "👋 Welcome to Maifelz! How can I assist with your Odoo ERP implementation, custom AI solutions, or integrations today?";
+      botConfig.placeholder_text = "Ask about Odoo, AI agents, or pricing...";
+      botConfig.suggested_chips = ["Odoo Implementation", "WhatsApp CRM", "Book a Free Consultation"];
+    }
 
     let isOpen = false;
     let conversationHistory = [];
@@ -727,11 +735,7 @@
           <div class="maz-teaser-text" id="maz-teaser-text">
             ${customTeaserText}
           </div>
-          <div class="maz-teaser-chips" id="maz-teaser-chips">
-            <button class="maz-t-chip" data-q="What services does Maifelz provide?">⚡ Services</button>
-            <button class="maz-t-chip" data-q="Tell me about Odoo ERP implementation">💼 Odoo ERP</button>
-            <button class="maz-t-chip" data-q="I want a free consultation">📅 Free Consultation</button>
-          </div>
+          <div class="maz-teaser-chips" id="maz-teaser-chips" style="display:none;"></div>
         </div>
       </div>
 
@@ -837,6 +841,29 @@
       }
       if (botConfig.brand_subtitle) document.getElementById("maz-subtitle").textContent = botConfig.brand_subtitle;
       if (botConfig.placeholder_text) inputEl.placeholder = botConfig.placeholder_text;
+
+      // Dynamically populate client's Teaser Quick Chips
+      const teaserChipsContainer = document.getElementById("maz-teaser-chips");
+      if (teaserChipsContainer) {
+        teaserChipsContainer.innerHTML = "";
+        if (botConfig.suggested_chips && botConfig.suggested_chips.length > 0) {
+          botConfig.suggested_chips.slice(0, 4).forEach((chipText) => {
+            const btn = document.createElement("button");
+            btn.className = "maz-t-chip";
+            btn.setAttribute("data-q", chipText);
+            btn.textContent = chipText;
+            if (botConfig.brand_color) {
+              btn.style.color = botConfig.brand_color;
+              btn.style.borderColor = botConfig.brand_color + "33";
+              btn.style.background = botConfig.brand_color + "14";
+            }
+            teaserChipsContainer.appendChild(btn);
+          });
+          teaserChipsContainer.style.display = "flex";
+        } else {
+          teaserChipsContainer.style.display = "none";
+        }
+      }
     }
 
     // Teaser Display Handling
