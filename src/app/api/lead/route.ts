@@ -93,6 +93,7 @@ export async function POST(req: Request) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bot_id: "maz_maifelz_live",
+          session_token: `portal_lead_${Date.now()}`,
           name: cleanName,
           email: cleanEmail,
           phone: cleanPhone,
