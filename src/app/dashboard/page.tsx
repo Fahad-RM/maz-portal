@@ -1344,7 +1344,7 @@ export default function CustomerBotStudio() {
 
             <div className="space-y-2">
               <a
-                href={`mailto:contact@maifelz.com?subject=Quota%20Recharge%20Request%20-%20${encodeURIComponent(tenantProfile?.company_name || "Customer")}&body=Hello%20Maifelz%20Team,%0A%0AWe%20would%20like%20to%20upgrade%20our%20monthly%20message%20quota%20for%20our%20account:%20${encodeURIComponent(tenantProfile?.email || "")}.`}
+                href={`mailto:info@maifelz.com?subject=Quota%20Recharge%20Request%20-%20${encodeURIComponent(tenantProfile?.company_name || "Customer")}&body=Hello%20Maifelz%20Team,%0A%0AWe%20would%20like%20to%20upgrade%20our%20monthly%20message%20quota%20for%20our%20account:%20${encodeURIComponent(tenantProfile?.email || "")}.`}
                 className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition flex items-center justify-center gap-2"
               >
                 Contact Maifelz Support via Email

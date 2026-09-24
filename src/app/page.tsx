@@ -353,11 +353,11 @@ export default function SuperbPortalLogin() {
 
             {/* Email Desk */}
             <a
-              href="mailto:contact@maifelz.com"
+              href="mailto:info@maifelz.com"
               className="px-4 py-2 text-xs font-bold text-slate-800 rounded-xl glass-bubble-frosted transition-all flex items-center gap-1.5"
             >
               <Mail className="w-3.5 h-3.5 text-cyan-600" />
-              <span>contact@maifelz.com</span>
+              <span>info@maifelz.com</span>
             </a>
           </div>
 
