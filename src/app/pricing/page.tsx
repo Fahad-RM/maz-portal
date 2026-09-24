@@ -1,15 +1,136 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
   Check, Sparkles, ArrowRight, Bot, 
   HelpCircle, MessageSquare, Database, ShieldCheck, Flame, BarChart3,
-  MessageCircle, Globe
+  MessageCircle, Globe, X, Mail, Phone, Building2, MapPin, Send, CheckCircle2,
+  Calendar, Lock
 } from "lucide-react";
+
+interface LeadFormData {
+  name: string;
+  email: string;
+  phone: string;
+  company: string;
+  location: string;
+  notes: string;
+}
 
 export default function PricingPage() {
   const [isAnnual, setIsAnnual] = useState(true);
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState("Ultimate Omnichannel Suite");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [createdLeadId, setCreatedLeadId] = useState<number | null>(null);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const [formData, setFormData] = useState<LeadFormData>({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    location: "",
+    notes: ""
+  });
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isModalOpen) {
+        closeModal();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isModalOpen]);
+
+  const openModal = (planName: string) => {
+    setSelectedPlan(planName);
+    setSubmitSuccess(false);
+    setCreatedLeadId(null);
+    setErrorMessage("");
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setErrorMessage("");
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage("");
+
+    if (!formData.name.trim()) {
+      setErrorMessage("Please enter your name.");
+      return;
+    }
+    if (!formData.email.trim() && !formData.phone.trim()) {
+      setErrorMessage("Please enter either your email or WhatsApp number so we can reach you.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const planBillingTag = `${selectedPlan} (${isAnnual ? "Yearly - Save ~33%" : "Monthly"})`;
+      const res = await fetch("/api/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          company: formData.company,
+          location: formData.location,
+          service_interested: planBillingTag,
+          billing_cycle: isAnnual ? "Yearly" : "Monthly",
+          notes: formData.notes
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setSubmitSuccess(true);
+        if (data.odoo_lead_id) {
+          setCreatedLeadId(data.odoo_lead_id);
+        }
+      } else {
+        setErrorMessage(data.error || "Failed to submit consultation request. Please try again or WhatsApp us directly.");
+      }
+    } catch (err: any) {
+      console.error("Submission error:", err);
+      setErrorMessage("Network error connecting to CRM. Please email us at info@maifelz.com or chat on WhatsApp.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const getPlanPriceDisplay = (plan: string) => {
+    if (plan.includes("Chatbot")) {
+      return isAnnual ? "$120 / year ($10/mo)" : "$15 / month";
+    }
+    if (plan.includes("ERP") || plan.includes("Analytics")) {
+      return isAnnual ? "$120 / year ($10/mo)" : "$15 / month";
+    }
+    if (plan.includes("Suite") || plan.includes("Ultimate")) {
+      return isAnnual ? "$200 / year ($16.60/mo)" : "$25 / month";
+    }
+    return "Custom Enterprise Quote";
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-purple-50/30 text-slate-900 py-14 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
@@ -130,12 +251,13 @@ export default function PricingPage() {
             </div>
 
             <div className="mt-8">
-              <Link
-                href="/login?service=chatbot"
-                className="w-full py-3 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition flex items-center justify-center gap-2 shadow-md"
+              <button
+                type="button"
+                onClick={() => openModal("Omnichannel AI Chatbot (Web + WhatsApp)")}
+                className="w-full py-3 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition flex items-center justify-center gap-2 shadow-md hover:scale-[1.01]"
               >
                 Get Started <ArrowRight className="w-4 h-4" />
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -194,12 +316,13 @@ export default function PricingPage() {
             </div>
 
             <div className="mt-8">
-              <Link
-                href="/login?service=odoo"
-                className="w-full py-3 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition flex items-center justify-center gap-2 shadow-md"
+              <button
+                type="button"
+                onClick={() => openModal("Conversational ERP Analytics (Odoo AI Copilot)")}
+                className="w-full py-3 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition flex items-center justify-center gap-2 shadow-md hover:scale-[1.01]"
               >
                 Get Started <ArrowRight className="w-4 h-4" />
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -262,12 +385,13 @@ export default function PricingPage() {
             </div>
 
             <div className="mt-8">
-              <Link
-                href="/login?service=full"
-                className="w-full py-3.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-800 hover:from-purple-800 hover:to-purple-900 text-white transition flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20"
+              <button
+                type="button"
+                onClick={() => openModal("Ultimate Omnichannel Suite (Web + WhatsApp + Odoo ERP)")}
+                className="w-full py-3.5 rounded-xl text-xs font-bold bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-800 hover:from-purple-800 hover:to-purple-900 text-white transition flex items-center justify-center gap-2 shadow-lg shadow-purple-900/20 hover:scale-[1.01]"
               >
                 Get Full Suite <ArrowRight className="w-4 h-4" />
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -304,15 +428,332 @@ export default function PricingPage() {
         <div className="text-center">
           <h3 className="text-xl font-bold text-slate-900 mb-2">Have specific enterprise requirements?</h3>
           <p className="text-xs text-slate-500 mb-4">Our team at Maifelz Technologies LLP can build custom OWL apps, workflow automations, and private LLM models.</p>
-          <a
-            href="mailto:info@maifelz.com"
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition"
+          <button
+            type="button"
+            onClick={() => openModal("Custom Enterprise AI & ERP Implementation")}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition shadow-sm"
           >
             Speak with an Enterprise Consultant
-          </a>
+          </button>
         </div>
 
       </div>
+
+      {/* ══════════════════════════════════════════════════════════════════════════ */}
+      {/* INTERACTIVE CONTACT CARD / GET STARTED CONSULTATION MODAL */}
+      {/* ══════════════════════════════════════════════════════════════════════════ */}
+      {isModalOpen && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeModal();
+          }}
+        >
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden relative max-h-[92vh] flex flex-col">
+            
+            {/* Modal Header */}
+            <div className="p-6 bg-gradient-to-r from-purple-900 via-slate-900 to-purple-950 text-white relative flex-shrink-0">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="absolute top-5 right-5 p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-white/10 transition"
+                aria-label="Close modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-2 text-xs font-semibold text-purple-300 uppercase tracking-wider mb-1">
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                Maifelz Technologies LLP • Consultation Card
+              </div>
+              <h2 className="text-xl font-bold text-white tracking-tight">
+                {submitSuccess ? "Inquiry Confirmed!" : "Get Started with MAZ AI"}
+              </h2>
+              <p className="text-xs text-purple-200/80 mt-1">
+                {submitSuccess 
+                  ? "Your request has been routed directly into our Odoo CRM pipeline."
+                  : "We'll configure your free sandbox, AI knowledge base & omnichannel connectors."
+                }
+              </p>
+
+              {/* Selected Plan Tag */}
+              {!submitSuccess && (
+                <div className="mt-3 inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-xl px-3 py-1.5 text-xs text-white">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="font-bold">{selectedPlan}</span>
+                  <span className="text-purple-200 text-[11px]">({getPlanPriceDisplay(selectedPlan)})</span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+              {submitSuccess ? (
+                /* Success View */
+                <div className="py-4 text-center space-y-4">
+                  <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border-4 border-emerald-100 animate-bounce">
+                    <CheckCircle2 className="w-9 h-9" />
+                  </div>
+
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">
+                      Thank you, {formData.name || "Valued Visitor"}! 🎉
+                    </h3>
+                    <p className="text-xs text-slate-600 mt-2 max-w-sm mx-auto leading-relaxed">
+                      Your consultation inquiry has been registered in our official Odoo CRM
+                      {createdLeadId ? ` (Opportunity #${createdLeadId})` : ""}. An enterprise engineer from{" "}
+                      <strong>Maifelz Technologies LLP</strong> will contact you via WhatsApp or Email shortly.
+                    </p>
+                  </div>
+
+                  {/* Summary Box */}
+                  <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-100 text-left text-xs space-y-2 max-w-sm mx-auto">
+                    <div className="text-[11px] font-bold text-purple-900 uppercase tracking-wider mb-1">
+                      Inquiry Details Logged:
+                    </div>
+                    <div className="text-slate-700">
+                      <strong>Plan:</strong> {selectedPlan} ({isAnnual ? "Yearly" : "Monthly"})
+                    </div>
+                    {formData.email && (
+                      <div className="text-slate-700">
+                        <strong>Email:</strong> {formData.email}
+                      </div>
+                    )}
+                    {formData.phone && (
+                      <div className="text-slate-700">
+                        <strong>WhatsApp / Phone:</strong> {formData.phone}
+                      </div>
+                    )}
+                    {formData.company && (
+                      <div className="text-slate-700">
+                        <strong>Company:</strong> {formData.company}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Quick Action Buttons */}
+                  <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+                    <a
+                      href={`https://wa.me/919447054133?text=${encodeURIComponent(
+                        `Hi Maifelz team! I just submitted an inquiry for ${selectedPlan}. My name is ${formData.name || ""}.`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Chat on WhatsApp Now
+                    </a>
+                    <button
+                      type="button"
+                      onClick={closeModal}
+                      className="px-5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
+                    >
+                      Close Window
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Contact Form View */
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {errorMessage && (
+                    <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                      <HelpCircle className="w-4 h-4 shrink-0 text-red-500" />
+                      <span>{errorMessage}</span>
+                    </div>
+                  )}
+
+                  {/* Name Input */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Full Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      required
+                      placeholder="e.g. John Doe"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent transition"
+                    />
+                  </div>
+
+                  {/* Email & Phone Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Business Email <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                        <input
+                          type="email"
+                          name="email"
+                          required
+                          placeholder="john@company.com"
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent transition"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        WhatsApp / Phone <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                        <input
+                          type="tel"
+                          name="phone"
+                          required
+                          placeholder="+91 94470 54133"
+                          value={formData.phone}
+                          onChange={handleInputChange}
+                          className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent transition"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Company & Location Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Company Name <span className="text-slate-400 font-normal">(Optional)</span>
+                      </label>
+                      <div className="relative">
+                        <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                        <input
+                          type="text"
+                          name="company"
+                          placeholder="e.g. Acme Solar Corp"
+                          value={formData.company}
+                          onChange={handleInputChange}
+                          className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent transition"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        City / Country <span className="text-slate-400 font-normal">(Optional)</span>
+                      </label>
+                      <div className="relative">
+                        <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                        <input
+                          type="text"
+                          name="location"
+                          placeholder="e.g. Dubai, UAE / Kochi, India"
+                          value={formData.location}
+                          onChange={handleInputChange}
+                          className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent transition"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Plan Selector Dropdown */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Service / Plan of Interest
+                    </label>
+                    <select
+                      value={selectedPlan}
+                      onChange={(e) => setSelectedPlan(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent transition"
+                    >
+                      <option value="Ultimate Omnichannel Suite (Web + WhatsApp + Odoo ERP)">
+                        Ultimate Omnichannel Suite ($200/yr or $25/mo)
+                      </option>
+                      <option value="Omnichannel AI Chatbot (Web + WhatsApp)">
+                        Omnichannel AI Chatbot ($120/yr or $15/mo)
+                      </option>
+                      <option value="Conversational ERP Analytics (Odoo AI Copilot)">
+                        Conversational ERP Analytics ($120/yr or $15/mo)
+                      </option>
+                      <option value="Custom Enterprise AI & ERP Implementation">
+                        Custom Enterprise AI &amp; ERP Implementation
+                      </option>
+                    </select>
+                  </div>
+
+                  {/* Notes / Special Requirements */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Requirements / Existing Systems <span className="text-slate-400 font-normal">(Optional)</span>
+                    </label>
+                    <textarea
+                      name="notes"
+                      rows={2}
+                      placeholder="e.g. Currently on Odoo 17, need WhatsApp chatbot and real-time Xero sync..."
+                      value={formData.notes}
+                      onChange={handleInputChange}
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-600 focus:border-transparent transition resize-none"
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <div className="pt-2">
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full py-3.5 rounded-xl bg-gradient-to-r from-purple-700 via-fuchsia-700 to-purple-800 hover:from-purple-800 hover:to-purple-900 text-white font-bold text-xs shadow-lg shadow-purple-900/20 transition flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          <span>Routing to Odoo CRM...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          <span>Submit Consultation &amp; Get Started</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Official Contact Card Box */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs text-slate-600 space-y-2 mt-4">
+                <div className="font-bold text-slate-800 flex items-center justify-between">
+                  <span>Maifelz Technologies LLP</span>
+                  <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold">
+                    Authorized Odoo Partner
+                  </span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-200/60 text-[11px]">
+                  <div className="flex items-center gap-1.5 text-slate-700">
+                    <Mail className="w-3.5 h-3.5 text-purple-600" />
+                    <span>Official Email:</span>
+                    <a href="mailto:info@maifelz.com" className="font-bold text-purple-700 hover:underline">
+                      info@maifelz.com
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-slate-700">
+                    <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Direct WhatsApp:</span>
+                    <a 
+                      href="https://wa.me/919447054133?text=Hi%20Maifelz%20team%2C%20I%20would%20like%20to%20learn%20more%20about%20MAZ%20AI" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="font-bold text-emerald-700 hover:underline"
+                    >
+                      +91 94470 54133
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
