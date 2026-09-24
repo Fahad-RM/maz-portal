@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { 
   Users, Bot, Flame, MessageSquare, Plus, CheckCircle2, 
   XCircle, Copy, Key, ArrowUpRight, Search, ShieldCheck, 
-  Pencil, RefreshCw, Eye, EyeOff, Check, Send, AlertTriangle, Lock, BarChart3
+  Pencil, RefreshCw, Eye, EyeOff, Check, Send, AlertTriangle, Lock, BarChart3,
+  MessageCircle, Smartphone, Globe
 } from "lucide-react";
 import { safeStorage } from "../../lib/safeStorage";
 
@@ -22,6 +23,7 @@ interface TenantData {
   messages_used_this_month: number;
   enable_chatbot?: boolean;
   enable_odoo?: boolean;
+  enable_whatsapp?: boolean;
   is_active: boolean;
   created_at: string;
 }
@@ -36,6 +38,7 @@ interface WelcomePacket {
   login_url: string;
   enable_chatbot?: boolean;
   enable_odoo?: boolean;
+  enable_whatsapp?: boolean;
 }
 
 const BACKEND_URL = "https://maz-backend-t1hy.onrender.com";
@@ -76,6 +79,7 @@ export default function AdminControlPanel() {
   const [newQuota, setNewQuota] = useState(5000);
   const [newEnableChatbot, setNewEnableChatbot] = useState(true);
   const [newEnableOdoo, setNewEnableOdoo] = useState(true);
+  const [newEnableWhatsapp, setNewEnableWhatsapp] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Welcome Packet Modal State
@@ -88,6 +92,7 @@ export default function AdminControlPanel() {
   const [editPassword, setEditPassword] = useState("");
   const [editEnableChatbot, setEditEnableChatbot] = useState(true);
   const [editEnableOdoo, setEditEnableOdoo] = useState(true);
+  const [editEnableWhatsapp, setEditEnableWhatsapp] = useState(true);
   const [resetUsageCounter, setResetUsageCounter] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
@@ -235,7 +240,8 @@ export default function AdminControlPanel() {
           max_bots: newPlan === "enterprise" ? 10 : newPlan === "pro" ? 3 : 1,
           max_messages_per_month: Number(newQuota),
           enable_chatbot: newEnableChatbot,
-          enable_odoo: newEnableOdoo
+          enable_odoo: newEnableOdoo,
+          enable_whatsapp: newEnableWhatsapp
         })
       });
 
@@ -255,6 +261,7 @@ export default function AdminControlPanel() {
         api_key: data.api_key,
         enable_chatbot: data.enable_chatbot,
         enable_odoo: data.enable_odoo,
+        enable_whatsapp: data.enable_whatsapp,
         login_url: data.login_url || "https://ai.maifelz.com/dashboard"
       });
 
@@ -271,6 +278,7 @@ export default function AdminControlPanel() {
     setEditPassword("");
     setEditEnableChatbot(t.enable_chatbot !== false);
     setEditEnableOdoo(t.enable_odoo !== false);
+    setEditEnableWhatsapp(t.enable_whatsapp !== false);
     setResetUsageCounter(false);
     setShowEditModal(true);
   };
@@ -289,7 +297,8 @@ export default function AdminControlPanel() {
         max_bots: Number(editingTenant.max_bots),
         max_messages_per_month: Number(editingTenant.max_messages_per_month),
         enable_chatbot: editEnableChatbot,
-        enable_odoo: editEnableOdoo
+        enable_odoo: editEnableOdoo,
+        enable_whatsapp: editEnableWhatsapp
       };
 
       if (editPassword && editPassword.trim()) {
@@ -347,25 +356,28 @@ export default function AdminControlPanel() {
   const copyWelcomePacketText = () => {
     if (!welcomePacket) return;
 
-    const servicesDesc = (welcomePacket.enable_chatbot !== false && welcomePacket.enable_odoo !== false)
-      ? "Full Enterprise Suite (AI Website Chatbot + Live Odoo ERP Analytics)"
-      : welcomePacket.enable_odoo !== false
-      ? "Live Odoo ERP Analytics & Natural Language Query Gateway"
-      : "AI Website Assistant & Customer Knowledge Base Studio";
+    const channels: string[] = [];
+    if (welcomePacket.enable_chatbot !== false) channels.push("🌐 Website Chatbot");
+    if (welcomePacket.enable_whatsapp !== false) channels.push("💬 WhatsApp Meta Cloud Bot");
+    if (welcomePacket.enable_odoo !== false) channels.push("💼 Live Odoo ERP Analytics");
+    const servicesDesc = channels.length > 0 ? channels.join(" + ") : "MAZ AI Platform Services";
 
-    const instructions = (welcomePacket.enable_odoo !== false && welcomePacket.enable_chatbot === false)
-      ? "Log in to connect your Odoo ERP, ask natural language analytical questions, export Excel/PDF reports, and dispatch summaries directly to WhatsApp!"
-      : (welcomePacket.enable_chatbot !== false && welcomePacket.enable_odoo === false)
-      ? "Log in to customize your AI assistant branding, upload company knowledge base documents, review leads, and copy your embed widget!"
-      : "Log in to customize your AI assistant, manage knowledge, monitor leads, and run live Odoo ERP analytics with instant WhatsApp dispatch!";
+    let instructions = "Log in to configure your bot knowledge base and channel integrations!";
+    if (welcomePacket.enable_whatsapp !== false && welcomePacket.enable_odoo !== false && welcomePacket.enable_chatbot !== false) {
+      instructions = "Log in to customize your AI assistant, embed website widget, link your WhatsApp Cloud API, and connect your Odoo ERP with live conversational analytics!";
+    } else if (welcomePacket.enable_whatsapp !== false && welcomePacket.enable_chatbot !== false) {
+      instructions = "Log in to customize your AI assistant branding, upload company knowledge base documents, grab your website embed script, and link your WhatsApp number!";
+    } else if (welcomePacket.enable_odoo !== false) {
+      instructions = "Log in to connect your Odoo ERP instance, query real-time enterprise metrics, export analytical reports, and dispatch summaries!";
+    }
 
-    const text = `🚀 Welcome to your MAZ AI Platform by Maifelz Technologies!
+    const text = `🚀 Welcome to your MAZ AI Platform by Maifelz Technologies LLP!
 
 Here are your credentials to access your Customer Portal:
 🔗 Customer Portal: ${welcomePacket.login_url}
 👤 Username: ${welcomePacket.username}
 🔑 Password: ${welcomePacket.password}
-📦 Assigned Service: ${servicesDesc}
+📦 Enabled Channels: ${servicesDesc}
 📊 Monthly Quota: ${welcomePacket.max_messages_per_month.toLocaleString()} msgs
 
 ${instructions}`;
@@ -607,7 +619,12 @@ ${instructions}`;
                       <div className="flex flex-col gap-1 items-start">
                         {t.enable_chatbot !== false && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                            <Bot className="w-3 h-3 text-blue-600" /> Chatbot
+                            <Globe className="w-3 h-3 text-blue-600" /> Web Bot
+                          </span>
+                        )}
+                        {t.enable_whatsapp !== false && (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <MessageCircle className="w-3 h-3 text-emerald-600" /> WhatsApp
                           </span>
                         )}
                         {t.enable_odoo !== false && (
@@ -779,73 +796,85 @@ ${instructions}`;
               </div>
 
               {/* Assigned Service Entitlements */}
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2.5">
                 <label className="block font-bold text-slate-800 text-xs">
-                  Assigned Services & Modules
+                  Assigned Omnichannel Modules & Entitlements
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => {
                       setNewEnableChatbot(true);
+                      setNewEnableWhatsapp(true);
                       setNewEnableOdoo(true);
                     }}
-                    className={`py-2 px-2 rounded-xl border text-center font-bold text-[11px] transition ${
-                      newEnableChatbot && newEnableOdoo
+                    className={`py-2 px-1.5 rounded-xl border text-center font-bold text-[11px] transition ${
+                      newEnableChatbot && newEnableWhatsapp && newEnableOdoo
                         ? "bg-purple-600 text-white border-purple-600 shadow-sm"
                         : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
                     }`}
                   >
-                    💎 Full Suite
+                    💎 Full Suite (All 3)
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setNewEnableChatbot(true);
+                      setNewEnableWhatsapp(true);
                       setNewEnableOdoo(false);
                     }}
-                    className={`py-2 px-2 rounded-xl border text-center font-bold text-[11px] transition ${
-                      newEnableChatbot && !newEnableOdoo
+                    className={`py-2 px-1.5 rounded-xl border text-center font-bold text-[11px] transition ${
+                      newEnableChatbot && newEnableWhatsapp && !newEnableOdoo
                         ? "bg-blue-600 text-white border-blue-600 shadow-sm"
                         : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
                     }`}
                   >
-                    🤖 Chatbot Only
+                    💬 Web + WhatsApp
                   </button>
                   <button
                     type="button"
                     onClick={() => {
                       setNewEnableChatbot(false);
+                      setNewEnableWhatsapp(false);
                       setNewEnableOdoo(true);
                     }}
-                    className={`py-2 px-2 rounded-xl border text-center font-bold text-[11px] transition ${
-                      !newEnableChatbot && newEnableOdoo
+                    className={`py-2 px-1.5 rounded-xl border text-center font-bold text-[11px] transition ${
+                      !newEnableChatbot && !newEnableWhatsapp && newEnableOdoo
                         ? "bg-purple-700 text-white border-purple-700 shadow-sm"
                         : "bg-white text-slate-600 border-slate-200 hover:bg-slate-100"
                     }`}
                   >
-                    📊 Odoo ERP Only
+                    💼 Odoo ERP Only
                   </button>
                 </div>
 
-                <div className="flex items-center gap-4 pt-1 text-[11px]">
-                  <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+                  <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700 bg-white p-2 rounded-xl border border-slate-200">
                     <input
                       type="checkbox"
                       checked={newEnableChatbot}
                       onChange={(e) => setNewEnableChatbot(e.target.checked)}
                       className="rounded text-blue-600 w-3.5 h-3.5"
                     />
-                    <span>AI Chatbot Studio</span>
+                    <span>🌐 Web Widget</span>
                   </label>
-                  <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700">
+                  <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700 bg-white p-2 rounded-xl border border-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={newEnableWhatsapp}
+                      onChange={(e) => setNewEnableWhatsapp(e.target.checked)}
+                      className="rounded text-emerald-600 w-3.5 h-3.5"
+                    />
+                    <span>💬 WhatsApp Bot</span>
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer font-medium text-slate-700 bg-white p-2 rounded-xl border border-slate-200">
                     <input
                       type="checkbox"
                       checked={newEnableOdoo}
                       onChange={(e) => setNewEnableOdoo(e.target.checked)}
                       className="rounded text-purple-600 w-3.5 h-3.5"
                     />
-                    <span>Odoo ERP Analytics</span>
+                    <span>💼 Odoo ERP</span>
                   </label>
                 </div>
               </div>
@@ -938,13 +967,13 @@ ${instructions}`;
                 </span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-500 font-sans">Assigned Services:</span>
+                <span className="text-slate-500 font-sans">Enabled Channels:</span>
                 <span className="font-bold text-slate-900 font-sans">
-                  {welcomePacket.enable_chatbot !== false && welcomePacket.enable_odoo !== false
-                    ? "Full Suite (Bot + Odoo ERP)"
-                    : welcomePacket.enable_odoo !== false
-                    ? "Odoo Live ERP Analytics"
-                    : "AI Chatbot Studio"}
+                  {[
+                    welcomePacket.enable_chatbot !== false ? "Web" : null,
+                    welcomePacket.enable_whatsapp !== false ? "WhatsApp" : null,
+                    welcomePacket.enable_odoo !== false ? "Odoo ERP" : null
+                  ].filter(Boolean).join(" + ") || "None"}
                 </span>
               </div>
               <div className="flex justify-between items-center">
@@ -1048,26 +1077,35 @@ ${instructions}`;
               {/* Service Entitlements in Edit Modal */}
               <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
                 <label className="block font-bold text-slate-800 text-xs">
-                  Active Services & Modules
+                  Active Channels & Omnichannel Modules
                 </label>
-                <div className="flex flex-col sm:flex-row gap-2 pt-0.5 text-xs">
-                  <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 flex-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5 text-xs">
+                  <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200">
                     <input
                       type="checkbox"
                       checked={editEnableChatbot}
                       onChange={(e) => setEditEnableChatbot(e.target.checked)}
                       className="rounded text-blue-600 w-4 h-4"
                     />
-                    <span>🤖 AI Chatbot Studio</span>
+                    <span>🌐 Web Widget</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200 flex-1">
+                  <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={editEnableWhatsapp}
+                      onChange={(e) => setEditEnableWhatsapp(e.target.checked)}
+                      className="rounded text-emerald-600 w-4 h-4"
+                    />
+                    <span>💬 WhatsApp Bot</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer font-semibold text-slate-700 bg-white p-2.5 rounded-xl border border-slate-200">
                     <input
                       type="checkbox"
                       checked={editEnableOdoo}
                       onChange={(e) => setEditEnableOdoo(e.target.checked)}
                       className="rounded text-purple-600 w-4 h-4"
                     />
-                    <span>📊 Odoo ERP Analytics</span>
+                    <span>💼 Odoo ERP</span>
                   </label>
                 </div>
               </div>
